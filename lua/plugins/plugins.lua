@@ -99,19 +99,120 @@ return {
     })
   end
   },
-
--- Yazi文件管理器
-{ "nvim-lua/plenary.nvim", lazy = true },
-
+  -- 窗口美化，标签栏...
   {
-    "mikavilpas/yazi.nvim",
-    ---@type YaziConfig | {}
-    opts = {},
-    cmd = {
-      "Yazi",
-      "Yazi cwd",
-      "Yazi toggle",
-    },
+    'romgrk/barbar.nvim',
+	dependencies = {
+		'lewis6991/gitsigns.nvim',
+		'nvim-tree/nvim-web-devicons',
+	},
+	init = function() vim.g.barbar_auto_setup = false end,
+	opts = {
+		animation = false,
+		auto_hide = true
+	},
+	version = '^1.0.0'
+  },
+
+  -- blink代码补全
+  {
+	'saghen/blink.cmp',
+	event = { "BufReadPre", "BufNewFile" },
+	dependencies = { 'rafamadriz/friendly-snippets' },
+	version = '1.*',
+	opts = {
+		keymap = { preset = 'super-tab' },
+		appearance = {
+			nerd_font_variant = 'mono'
+		},
+		completion = { documentation = { auto_show = true } },
+		sources = {
+			default = { 'lsp', 'snippets', 'path', 'buffer' },
+		},
+		signature = {
+			enabled = true,
+		}
+	},
+	opts_extend = { "sources.default" },
+  },
+
+  -- 状态栏插件
+  {
+	'nvim-lualine/lualine.nvim',
+	dependencies = { 'nvim-tree/nvim-web-devicons' },
+	event = { "BufReadPre", "BufNewFile" },
+	opts = {
+		theme = "auto"
+	}
+  },
+
+  -- markdown可视化增强
+  {
+	'MeanderingProgrammer/render-markdown.nvim',
+	dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-mini/mini.nvim' },
+	opts = {},
+  },
+
+  -- 主题配置
+  {
+	"catppuccin/nvim",
+	name = "catppuccin",
+	priority = 1000,
+	opts = {
+		flavour = "frappe",
+		transparent_background = true
+	}
+  },
+
+  -- lsp管理插件
+  {
+	"mason-org/mason-lspconfig.nvim",
+	opts = {
+		ensure_installed = {
+			"lua_ls",
+			"clangd",
+			"ts_ls",
+			"rust_analyzer",
+			"tailwindcss",
+		}
+	},
+	dependencies = {
+		{
+			"mason-org/mason.nvim",
+			opts = {
+				ui = {
+					icons = {
+						package_installed = "✓",
+						package_pending = "➜",
+						package_uninstalled = "✗"
+					}
+				}
+			}
+		},
+		{
+			"WhoIsSethDaniel/mason-tool-installer.nvim",
+			opts = {
+				ensure_installed = {
+					"clang-format"
+				},
+			}
+		},
+		{
+			"neovim/nvim-lspconfig",
+			event = { "BufReadPre", "BufNewFile" },
+		}
+	},
+  },
+
+  -- nvim-tree
+  {
+	"nvim-tree/nvim-tree.lua",
+	version = "*",
+	lazy = false,
+	dependencies = {
+		"nvim-tree/nvim-web-devicons",
+	},
+	opts = {}
   },
 
 }
