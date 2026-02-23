@@ -27,6 +27,7 @@ safe_require("plugins")
 local bracket = safe_require("modules.bracket")
 if bracket then bracket.setup() end -- 括号匹配+自动缩进
 safe_require("modules.lsp")             -- LSP 基础配置
+safe_require("modules.clang-format")   -- Clang-format 配置
 
 -- ======================== 2. Neovide 专属配置 ==============================
 if vim.g.neovide then
