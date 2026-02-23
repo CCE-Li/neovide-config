@@ -239,6 +239,238 @@ vim.keymap.set("n", "<leader>sd", "<cmd>SessionDelete<CR>", vim.tbl_extend("forc
 -- Leader + p：项目切换
 vim.keymap.set("n", "<leader>sp", "<cmd>Telescope projects<CR>", vim.tbl_extend("force", map_opts, { desc = "切换项目" }))
 
+-- ======================== 8. 界面控制快捷键 ================================
+-- Leader + t：切换标签栏显示/隐藏
+vim.keymap.set("n", "<leader>tt", function()
+  if vim.opt.showtabline:get() == 0 then
+    vim.opt.showtabline = 2
+    print("标签栏已显示")
+  else
+    vim.opt.showtabline = 0
+    print("标签栏已隐藏")
+  end
+end, vim.tbl_extend("force", map_opts, { desc = "切换标签栏显示/隐藏" }))
+
+-- Leader + b：切换状态栏显示/隐藏
+vim.keymap.set("n", "<leader>bb", function()
+  if vim.opt.laststatus:get() == 0 then
+    vim.opt.laststatus = 3
+    print("状态栏已显示")
+  else
+    vim.opt.laststatus = 0
+    print("状态栏已隐藏")
+  end
+end, vim.tbl_extend("force", map_opts, { desc = "切换状态栏显示/隐藏" }))
+
+-- Leader + l：切换行号显示/隐藏
+vim.keymap.set("n", "<leader>ll", function()
+  if vim.opt.number:get() then
+    vim.opt.number = false
+    vim.opt.relativenumber = false
+    print("行号已隐藏")
+  else
+    vim.opt.number = true
+    vim.opt.relativenumber = true
+    print("行号已显示")
+  end
+end, vim.tbl_extend("force", map_opts, { desc = "切换行号显示/隐藏" }))
+
+-- Leader + c：专注模式（隐藏所有界面元素）
+vim.keymap.set("n", "<leader>cc", function()
+  vim.opt.showtabline = 0
+  vim.opt.laststatus = 0
+  vim.opt.number = false
+  vim.opt.relativenumber = false
+  vim.opt.signcolumn = "no"
+  vim.opt.cursorline = false
+  print("专注模式已启用")
+end, vim.tbl_extend("force", map_opts, { desc = "专注模式（隐藏所有界面元素）" }))
+
+-- Leader + n：正常模式（恢复所有界面元素）
+vim.keymap.set("n", "<leader>nn", function()
+  vim.opt.showtabline = 2
+  vim.opt.laststatus = 3
+  vim.opt.number = true
+  vim.opt.relativenumber = true
+  vim.opt.signcolumn = "yes"
+  vim.opt.cursorline = true
+  print("正常模式已恢复")
+end, vim.tbl_extend("force", map_opts, { desc = "正常模式（恢复所有界面元素）" }))
+
+-- ======================== 8.1. 标签页导航快捷键 ==============================
+-- Alt + 数字键：快速切换到指定标签页
+for i = 1, 9 do
+  vim.keymap.set("n", "<M-" .. i .. ">", function()
+    vim.cmd("tabnext " .. i)
+  end, vim.tbl_extend("force", map_opts, { desc = "切换到标签页 " .. i }))
+end
+
+-- Alt + 0：切换到最后一个标签页
+vim.keymap.set("n", "<M-0>", function()
+  vim.cmd("tablast")
+end, vim.tbl_extend("force", map_opts, { desc = "切换到最后一个标签页" }))
+
+-- Ctrl + Tab：切换到下一个标签页
+vim.keymap.set("n", "<C-Tab>", function()
+  vim.cmd("tabnext")
+end, vim.tbl_extend("force", map_opts, { desc = "切换到下一个标签页" }))
+
+-- Ctrl + Shift + Tab：切换到上一个标签页
+vim.keymap.set("n", "<C-S-Tab>", function()
+  vim.cmd("tabprevious")
+end, vim.tbl_extend("force", map_opts, { desc = "切换到上一个标签页" }))
+
+-- Ctrl + w：关闭当前标签页
+vim.keymap.set("n", "<C-w>", function()
+  vim.cmd("tabclose")
+end, vim.tbl_extend("force", map_opts, { desc = "关闭当前标签页" }))
+
+-- ======================== 9. 鼠标窗口控制快捷键 ==============================
+-- 鼠标右键点击窗口边缘可以调整大小（已通过 mousemodel="extend" 启用）
+
+-- Leader + w：窗口操作菜单
+vim.keymap.set("n", "<leader>ww", function()
+  local choice = vim.fn.inputlist({
+    "窗口操作:",
+    "1. 水平分割",
+    "2. 垂直分割", 
+    "3. 关闭当前窗口",
+    "4. 仅保留当前窗口",
+    "5. 切换窗口",
+    "6. 窗口均等"
+  })
+  
+  if choice == 1 then vim.cmd("split") end
+  if choice == 2 then vim.cmd("vsplit") end
+  if choice == 3 then vim.cmd("close") end
+  if choice == 4 then vim.cmd("only") end
+  if choice == 5 then vim.cmd("wincmd w") end
+  if choice == 6 then vim.cmd("wincmd =") end
+end, vim.tbl_extend("force", map_opts, { desc = "窗口操作菜单" }))
+
+-- 鼠标中键关闭窗口
+vim.keymap.set("n", "<MiddleMouse>", "<C-w>c", vim.tbl_extend("force", map_opts, { desc = "鼠标中键关闭窗口" }))
+
+-- Ctrl + 鼠标滚轮调整窗口大小
+vim.keymap.set("n", "<C-MouseUp>", "<C-w>+", vim.tbl_extend("force", map_opts, { desc = "Ctrl+滚轮向上：增加窗口高度" }))
+vim.keymap.set("n", "<C-MouseDown>", "<C-w>-", vim.tbl_extend("force", map_opts, { desc = "Ctrl+滚轮向下：减少窗口高度" }))
+vim.keymap.set("n", "<C-S-MouseUp>", "<C-w>", vim.tbl_extend("force", map_opts, { desc = "Ctrl+Shift+滚轮向上：增加窗口宽度" }))
+vim.keymap.set("n", "<C-S-MouseDown>", "<C-w><", vim.tbl_extend("force", map_opts, { desc = "Ctrl+Shift+滚轮向下：减少窗口宽度" }))
+
+-- ======================== 10. 文件创建快捷键 ==============================
+-- Ctrl + n：在当前文件夹创建新的未命名 C++ 文件（新标签页）
+vim.keymap.set("n", "<C-n>", function()
+  -- 获取当前文件的目录
+  local current_file = vim.fn.expand("%:p")
+  local current_dir = vim.fn.fnamemodify(current_file, ":h")
+  
+  -- 如果没有当前文件，使用当前工作目录
+  if current_dir == "." then
+    current_dir = vim.fn.getcwd()
+  end
+  
+  -- 生成新的未命名文件名（基于时间戳避免冲突）
+  local timestamp = os.date("%Y%m%d_%H%M%S")
+  local new_filename = string.format("untitled_%s.cpp", timestamp)
+  local new_filepath = vim.fn.join({current_dir, new_filename}, "\\")
+  
+  -- 在新标签页中创建文件
+  vim.cmd("tabnew")
+  vim.cmd("edit " .. new_filepath)
+  
+  -- 插入 ACM 模板（如果可用）
+  pcall(function()
+    local acm = require("modules.acm")
+    acm.insert_template()
+  end)
+  
+  print(string.format("已创建新 C++ 文件: %s", new_filename))
+end, vim.tbl_extend("force", map_opts, { desc = "创建新的未命名 C++ 文件（新标签页）" }))
+
+-- Ctrl + Shift + n：在当前文件夹创建新的未命名文件（当前标签页）
+vim.keymap.set("n", "<C-S-n>", function()
+  -- 获取当前文件的目录
+  local current_file = vim.fn.expand("%:p")
+  local current_dir = vim.fn.fnamemodify(current_file, ":h")
+  
+  -- 如果没有当前文件，使用当前工作目录
+  if current_dir == "." then
+    current_dir = vim.fn.getcwd()
+  end
+  
+  -- 生成新的未命名文件名
+  local timestamp = os.date("%Y%m%d_%H%M%S")
+  local new_filename = string.format("untitled_%s.cpp", timestamp)
+  local new_filepath = vim.fn.join({current_dir, new_filename}, "\\")
+  
+  -- 在当前窗口中创建文件
+  vim.cmd("edit " .. new_filepath)
+  
+  -- 插入 ACM 模板（如果可用）
+  pcall(function()
+    local acm = require("modules.acm")
+    acm.insert_template()
+  end)
+  
+  print(string.format("已创建新 C++ 文件: %s", new_filename))
+end, vim.tbl_extend("force", map_opts, { desc = "创建新的未命名 C++ 文件（当前标签页）" }))
+
+-- ======================== 10.1. 文件重命名快捷键 ==============================
+-- Leader + r：重命名当前文件
+vim.keymap.set("n", "<leader>rn", function()
+  local old_name = vim.fn.expand("%:t")
+  local old_path = vim.fn.expand("%:p")
+  local new_name = vim.fn.input("新文件名: ", old_name)
+  
+  if new_name ~= "" and new_name ~= old_name then
+    local new_path = vim.fn.expand("%:h") .. "\\" .. new_name
+    
+    -- 保存当前文件
+    vim.cmd("w")
+    
+    -- 使用 :saveas 创建新文件
+    vim.cmd("saveas " .. new_path)
+    
+    -- 删除旧文件（Windows）
+    if vim.fn.has("win32") == 1 then
+      vim.fn.system("del \"" .. old_path .. "\"")
+    else
+      vim.fn.system("rm \"" .. old_path .. "\"")
+    end
+    
+    print(string.format("文件已重命名: %s -> %s", old_name, new_name))
+  end
+end, vim.tbl_extend("force", map_opts, { desc = "重命名当前文件" }))
+
+-- Leader + m：移动文件到其他目录
+vim.keymap.set("n", "<leader>mv", function()
+  local old_name = vim.fn.expand("%:t")
+  local old_path = vim.fn.expand("%:p")
+  local current_dir = vim.fn.expand("%:h")
+  
+  -- 获取目标目录
+  local target_dir = vim.fn.input("目标目录: ", current_dir)
+  
+  if target_dir ~= "" and target_dir ~= current_dir then
+    local new_path = target_dir .. "\\" .. old_name
+    
+    -- 保存当前文件
+    vim.cmd("w")
+    
+    -- 使用 :saveas 创建新文件
+    vim.cmd("saveas " .. new_path)
+    
+    -- 删除旧文件
+    if vim.fn.has("win32") == 1 then
+      vim.fn.system("del \"" .. old_path .. "\"")
+    else
+      vim.fn.system("rm \"" .. old_path .. "\"")
+    end
+    
+    print(string.format("文件已移动: %s -> %s", old_path, new_path))
+  end
+end, vim.tbl_extend("force", map_opts, { desc = "移动文件到其他目录" }))
+
 -- ===========================================================================
 -- 配置结束
 -- ===========================================================================

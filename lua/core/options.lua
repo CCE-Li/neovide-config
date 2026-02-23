@@ -78,6 +78,11 @@ for opt, value in pairs(all_opts) do
 end
 
 -- ======================== 额外优化配置 (补充) =============================
+-- 显示标签栏以查看当前打开的文件
+vim.opt.showtabline = 2        -- 始终显示标签栏
+-- vim.opt.laststatus = 0         -- 隐藏状态栏（如果不需要）
+vim.opt.laststatus = 3         -- 全局状态栏（如果需要保留）
+
 -- 创建撤销文件目录（避免 undofile=true 报错）
 vim.fn.mkdir(vim.fn.stdpath("data") .. "/undo", "p")
 
