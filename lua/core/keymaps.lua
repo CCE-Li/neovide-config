@@ -64,7 +64,6 @@ vim.keymap.set("i", "<C-S-z>", "<C-o><C-r>", vim.tbl_extend("force", map_opts, {
 vim.keymap.set(edit_mode, "<S-CR>", "<Esc>o", vim.tbl_extend("force", map_opts, { desc = "下一行开头（插入模式）" }))
 vim.keymap.set(edit_mode, "<C-CR>", "<Esc>O", vim.tbl_extend("force", map_opts, { desc = "上一行开头（插入模式）" }))
 
-
 -- ======================== 2. Tab/缩进配置 (智能缩进) =======================
 -- 插入模式 Tab 键：空行自动缩进 / 非空行插入4空格
 vim.keymap.set('i', '<Tab>', function()
@@ -79,6 +78,13 @@ vim.keymap.set('i', '<Tab>', function()
     return string.rep(' ', vim.o.shiftwidth)
   end
 end, vim.tbl_extend("force", expr_opts, { desc = "插入模式：Tab 智能缩进" }))
+
+-- ======================== 2.1. 插入模式全选功能 ==============================
+-- 插入模式：Ctrl + A 全选当前文件内容
+vim.keymap.set("i", "<C-a>", function()
+  -- 进入普通模式，全选文件内容，然后回到插入模式
+  return vim.api.nvim_replace_termcodes('<Esc>ggVG', true, true, true)
+end, vim.tbl_extend("force", expr_opts, { desc = "插入模式：全选文件内容" }))
 
 -- ======================== 3. 复制/粘贴 (Ctrl+C/Ctrl+V) =====================
 -- -------------------------- 复制 (Ctrl+C) ----------------------------------
