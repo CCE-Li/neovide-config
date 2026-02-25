@@ -64,43 +64,6 @@ vim.keymap.set("i", "<C-S-z>", "<C-o><C-r>", vim.tbl_extend("force", map_opts, {
 vim.keymap.set(edit_mode, "<S-CR>", "<Esc>o", vim.tbl_extend("force", map_opts, { desc = "下一行开头（插入模式）" }))
 vim.keymap.set(edit_mode, "<C-CR>", "<Esc>O", vim.tbl_extend("force", map_opts, { desc = "上一行开头（插入模式）" }))
 
--- ======================== 文本选择功能 (Shift + 方向键) ====================
--- -------------------------- Shift + 方向键 (字符级选择) ----------------------
--- 普通模式：使用 v_ 命令选择并返回普通模式
-vim.keymap.set("n", "<S-Left>", "v_h", vim.tbl_extend("force", map_opts, { desc = "字符选择：向左" }))
-vim.keymap.set("n", "<S-Right>", "v_l", vim.tbl_extend("force", map_opts, { desc = "字符选择：向右" }))
-vim.keymap.set("n", "<S-Up>", "v_k", vim.tbl_extend("force", map_opts, { desc = "字符选择：向上" }))
-vim.keymap.set("n", "<S-Down>", "v_j", vim.tbl_extend("force", map_opts, { desc = "字符选择：向下" }))
-
--- 插入模式：使用 <C-o> 临时执行普通模式命令进行选择
-vim.keymap.set("i", "<S-Left>", "<C-o>v_h<C-o>", vim.tbl_extend("force", map_opts, { desc = "字符选择：向左（插入模式）" }))
-vim.keymap.set("i", "<S-Right>", "<C-o>v_l<C-o>", vim.tbl_extend("force", map_opts, { desc = "字符选择：向右（插入模式）" }))
-vim.keymap.set("i", "<S-Up>", "<C-o>v_k<C-o>", vim.tbl_extend("force", map_opts, { desc = "字符选择：向上（插入模式）" }))
-vim.keymap.set("i", "<S-Down>", "<C-o>v_j<C-o>", vim.tbl_extend("force", map_opts, { desc = "字符选择：向下（插入模式）" }))
-
--- -------------------------- Ctrl + Shift + 方向键 (单词级选择) --------------
--- 普通模式：使用 v_ 命令按单词选择并返回普通模式
-vim.keymap.set("n", "<C-S-Left>", "v_b", vim.tbl_extend("force", map_opts, { desc = "单词选择：向左" }))
-vim.keymap.set("n", "<C-S-Right>", "v_w", vim.tbl_extend("force", map_opts, { desc = "单词选择：向右" }))
-vim.keymap.set("n", "<C-S-Up>", "v_^", vim.tbl_extend("force", map_opts, { desc = "单词选择：到行首" }))
-vim.keymap.set("n", "<C-S-Down>", "v_$", vim.tbl_extend("force", map_opts, { desc = "单词选择：到行尾" }))
-
--- 插入模式：使用 <C-o> 临时执行普通模式命令进行单词选择
-vim.keymap.set("i", "<C-S-Left>", "<C-o>v_b<C-o>", vim.tbl_extend("force", map_opts, { desc = "单词选择：向左（插入模式）" }))
-vim.keymap.set("i", "<C-S-Right>", "<C-o>v_w<C-o>", vim.tbl_extend("force", map_opts, { desc = "单词选择：向右（插入模式）" }))
-vim.keymap.set("i", "<C-S-Up>", "<C-o>v_^<C-o>", vim.tbl_extend("force", map_opts, { desc = "单词选择：到行首（插入模式）" }))
-vim.keymap.set("i", "<C-S-Down>", "<C-o>v_$<C-o>", vim.tbl_extend("force", map_opts, { desc = "单词选择：到行尾（插入模式）" }))
-
--- 可视模式扩展：已选择时扩展选择范围
-vim.keymap.set("v", "<S-Left>", "h", vim.tbl_extend("force", map_opts, { desc = "扩展选择：向左" }))
-vim.keymap.set("v", "<S-Right>", "l", vim.tbl_extend("force", map_opts, { desc = "扩展选择：向右" }))
-vim.keymap.set("v", "<S-Up>", "k", vim.tbl_extend("force", map_opts, { desc = "扩展选择：向上" }))
-vim.keymap.set("v", "<S-Down>", "j", vim.tbl_extend("force", map_opts, { desc = "扩展选择：向下" }))
-
-vim.keymap.set("v", "<C-S-Left>", "b", vim.tbl_extend("force", map_opts, { desc = "扩展选择：按单词向左" }))
-vim.keymap.set("v", "<C-S-Right>", "w", vim.tbl_extend("force", map_opts, { desc = "扩展选择：按单词向右" }))
-vim.keymap.set("v", "<C-S-Up>", "^", vim.tbl_extend("force", map_opts, { desc = "扩展选择：到行首" }))
-vim.keymap.set("v", "<C-S-Down>", "$", vim.tbl_extend("force", map_opts, { desc = "扩展选择：到行尾" }))
 
 -- ======================== 2. Tab/缩进配置 (智能缩进) =======================
 -- 插入模式 Tab 键：空行自动缩进 / 非空行插入4空格
