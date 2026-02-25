@@ -1,4 +1,4 @@
-﻿-- ===========================================================================
+-- ===========================================================================
 -- Neovim 热键配置 (重构版)
 -- 核心原则：结构清晰 / 注释完整 / 兼容插入/普通模式 / 贴合编辑器习惯
 -- ===========================================================================
@@ -72,24 +72,123 @@ vim.keymap.set("n", "<S-Right>", "v_l", vim.tbl_extend("force", map_opts, { desc
 vim.keymap.set("n", "<S-Up>", "v_k", vim.tbl_extend("force", map_opts, { desc = "字符选择：向上" }))
 vim.keymap.set("n", "<S-Down>", "v_j", vim.tbl_extend("force", map_opts, { desc = "字符选择：向下" }))
 
--- 插入模式：使用 <C-o> 临时执行普通模式命令进行选择
-vim.keymap.set("i", "<S-Left>", "<C-o>v_h<C-o>", vim.tbl_extend("force", map_opts, { desc = "字符选择：向左（插入模式）" }))
-vim.keymap.set("i", "<S-Right>", "<C-o>v_l<C-o>", vim.tbl_extend("force", map_opts, { desc = "字符选择：向右（插入模式）" }))
-vim.keymap.set("i", "<S-Up>", "<C-o>v_k<C-o>", vim.tbl_extend("force", map_opts, { desc = "字符选择：向上（插入模式）" }))
-vim.keymap.set("i", "<S-Down>", "<C-o>v_j<C-o>", vim.tbl_extend("force", map_opts, { desc = "字符选择：向下（插入模式）" }))
+-- 插入模式：使用更智能的选择方式，支持扩展选择
+vim.keymap.set("i", "<S-Left>", function()
+  local mode = vim.api.nvim_get_mode().mode
+  if mode:find('v') then
+    -- 如果已经在选择模式，扩展选择
+    vim.cmd('normal! h')
+  else
+    -- 开始新的选择
+    local pos = vim.api.nvim_win_get_cursor(0)
+    if pos[2] > 0 then
+      vim.api.nvim_win_set_cursor(0, {pos[1], pos[2] - 1})
+      vim.cmd('normal! v')
+      vim.api.nvim_win_set_cursor(0, pos)
+    end
+  end
+end, vim.tbl_extend("force", map_opts, { desc = "字符选择：向左（插入模式）" }))
+
+vim.keymap.set("i", "<S-Right>", function()
+  local mode = vim.api.nvim_get_mode().mode
+  if mode:find('v') then
+    -- 如果已经在选择模式，扩展选择
+    vim.cmd('normal! l')
+  else
+    -- 开始新的选择
+    local pos = vim.api.nvim_win_get_cursor(0)
+    local line_len = vim.api.nvim_get_current_line():len()
+    if pos[2] < line_len then
+      vim.api.nvim_win_set_cursor(0, pos)
+      vim.cmd('normal! v')
+      vim.api.nvim_win_set_cursor(0, {pos[1], pos[2] + 1})
+    end
+  end
+end, vim.tbl_extend("force", map_opts, { desc = "字符选择：向右（插入模式）" }))
+
+vim.keymap.set("i", "<S-Up>", function()
+  local mode = vim.api.nvim_get_mode().mode
+  if mode:find('v') then
+    -- 如果已经在选择模式，扩展选择
+    vim.cmd('normal! k')
+  else
+    -- 开始新的选择
+    local pos = vim.api.nvim_win_get_cursor(0)
+    if pos[1] > 1 then
+      vim.api.nvim_win_set_cursor(0, {pos[1] - 1, pos[2]})
+      vim.cmd('normal! v')
+      vim.api.nvim_win_set_cursor(0, pos)
+    end
+  end
+end, vim.tbl_extend("force", map_opts, { desc = "字符选择：向上（插入模式）" }))
+
+vim.keymap.set("i", "<S-Down>", function()
+  local mode = vim.api.nvim_get_mode().mode
+  if mode:find('v') then
+    -- 如果已经在选择模式，扩展选择
+    vim.cmd('normal! j')
+  else
+    -- 开始新的选择
+    local pos = vim.api.nvim_win_get_cursor(0)
+    local line_count = vim.api.nvim_buf_line_count(0)
+    if pos[1] < line_count then
+      vim.api.nvim_win_set_cursor(0, {pos[1] + 1, pos[2]})
+      vim.cmd('normal! v')
+      vim.api.nvim_win_set_cursor(0, pos)
+    end
+  end
+end, vim.tbl_extend("force", map_opts, { desc = "字符选择：向下（插入模式）" }))
 
 -- -------------------------- Ctrl + Shift + 方向键 (单词级选择) --------------
 -- 普通模式：使用 v_ 命令按单词选择并返回普通模式
 vim.keymap.set("n", "<C-S-Left>", "v_b", vim.tbl_extend("force", map_opts, { desc = "单词选择：向左" }))
 vim.keymap.set("n", "<C-S-Right>", "v_w", vim.tbl_extend("force", map_opts, { desc = "单词选择：向右" }))
+vim.keymap.set("n", "<C-S-Up>", "^", vim.tbl_extend("force", map_opts, { desc = "单词选择：到行首" }))
+vim.keymap.set("n", "<C-S-Down>", "$", vim.tbl_extend("force", map_opts, { desc = "单词选择：到行尾" }))
 vim.keymap.set("n", "<C-S-Up>", "v_^", vim.tbl_extend("force", map_opts, { desc = "单词选择：到行首" }))
 vim.keymap.set("n", "<C-S-Down>", "v_$", vim.tbl_extend("force", map_opts, { desc = "单词选择：到行尾" }))
 
--- 插入模式：使用 <C-o> 临时执行普通模式命令进行单词选择
-vim.keymap.set("i", "<C-S-Left>", "<C-o>v_b<C-o>", vim.tbl_extend("force", map_opts, { desc = "单词选择：向左（插入模式）" }))
-vim.keymap.set("i", "<C-S-Right>", "<C-o>v_w<C-o>", vim.tbl_extend("force", map_opts, { desc = "单词选择：向右（插入模式）" }))
-vim.keymap.set("i", "<C-S-Up>", "<C-o>v_^<C-o>", vim.tbl_extend("force", map_opts, { desc = "单词选择：到行首（插入模式）" }))
-vim.keymap.set("i", "<C-S-Down>", "<C-o>v_$<C-o>", vim.tbl_extend("force", map_opts, { desc = "单词选择：到行尾（插入模式）" }))
+-- 插入模式：使用更智能的单词选择方式
+vim.keymap.set("i", "<C-S-Left>", function()
+  -- 向左选择到单词开头
+  local pos = vim.api.nvim_win_get_cursor(0)
+  local line = vim.api.nvim_get_current_line()
+  local word_start = vim.fn.match(line:sub(1, pos[2]), '\\k*$')
+  if word_start > 0 then
+    vim.api.nvim_win_set_cursor(0, {pos[1], word_start})
+    vim.cmd('normal! v')
+    vim.api.nvim_win_set_cursor(0, pos)
+  end
+end, vim.tbl_extend("force", map_opts, { desc = "单词选择：向左（插入模式）" }))
+
+vim.keymap.set("i", "<C-S-Right>", function()
+  -- 向右选择到单词结尾
+  local pos = vim.api.nvim_win_get_cursor(0)
+  local line = vim.api.nvim_get_current_line()
+  local word_end = vim.fn.match(line, '\\k', pos[2] + 1)
+  if word_end >= 0 then
+    vim.api.nvim_win_set_cursor(0, pos)
+    vim.cmd('normal! v')
+    vim.api.nvim_win_set_cursor(0, {pos[1], word_end})
+  end
+end, vim.tbl_extend("force", map_opts, { desc = "单词选择：向右（插入模式）" }))
+
+vim.keymap.set("i", "<C-S-Up>", function()
+  -- 选择到行首
+  local pos = vim.api.nvim_win_get_cursor(0)
+  vim.api.nvim_win_set_cursor(0, {pos[1], 0})
+  vim.cmd('normal! v')
+  vim.api.nvim_win_set_cursor(0, pos)
+end, vim.tbl_extend("force", map_opts, { desc = "单词选择：到行首（插入模式）" }))
+
+vim.keymap.set("i", "<C-S-Down>", function()
+  -- 选择到行尾
+  local pos = vim.api.nvim_win_get_cursor(0)
+  local line_len = vim.api.nvim_get_current_line():len()
+  vim.api.nvim_win_set_cursor(0, pos)
+  vim.cmd('normal! v')
+  vim.api.nvim_win_set_cursor(0, {pos[1], line_len})
+end, vim.tbl_extend("force", map_opts, { desc = "单词选择：到行尾（插入模式）" }))
 
 -- 可视模式扩展：已选择时扩展选择范围
 vim.keymap.set("v", "<S-Left>", "h", vim.tbl_extend("force", map_opts, { desc = "扩展选择：向左" }))
@@ -470,6 +569,75 @@ vim.keymap.set("n", "<leader>mv", function()
     print(string.format("文件已移动: %s -> %s", old_path, new_path))
   end
 end, vim.tbl_extend("force", map_opts, { desc = "移动文件到其他目录" }))
+
+-- ======================== 9. 插入模式括号包围功能 ==========================
+-- 在插入模式下，使用 Shift + 括号包围选中的文本
+
+-- 辅助函数：包围选中文本
+local function surround_selection(left_bracket, right_bracket)
+  -- 保存当前寄存器内容
+  local saved_reg = vim.fn.getreg('"')
+  local saved_reg_type = vim.fn.getregtype('"')
+  
+  -- 退出选择模式并复制选中文本
+  vim.cmd('normal! y')
+  local selected_text = vim.fn.getreg('"')
+  
+  -- 恢复寄存器
+  vim.fn.setreg('"', saved_reg, saved_reg_type)
+  
+  -- 如果有选中文本，则进行包围
+  if selected_text and selected_text ~= "" then
+    -- 删除选中文本并插入包围后的文本
+    local surrounded_text = left_bracket .. selected_text .. right_bracket
+    vim.cmd('normal! c')
+    vim.api.nvim_put({surrounded_text}, "", true, true)
+    return true
+  end
+  return false
+end
+
+-- Shift + ( ) 包围选中文本
+vim.keymap.set("i", "<S-9>", function()
+  -- 尝试包围选中文本
+  local success = surround_selection("(", ")")
+  if not success then
+    -- 没有选中文本时，正常输入括号
+    return "("
+  end
+end, { expr = true, noremap = true, silent = true, desc = "插入模式：用括号包围选中文本" })
+
+-- Shift + [ ] 包围选中文本
+vim.keymap.set("i", "<S-[>", function()
+  local success = surround_selection("[", "]")
+  if not success then
+    return "["
+  end
+end, { expr = true, noremap = true, silent = true, desc = "插入模式：用方括号包围选中文本" })
+
+-- Shift + { } 包围选中文本  
+vim.keymap.set("i", "<S-}>", function()
+  local success = surround_selection("{", "}")
+  if not success then
+    return "{"
+  end
+end, { expr = true, noremap = true, silent = true, desc = "插入模式：用花括号包围选中文本" })
+
+-- Shift + " " 包围选中文本
+vim.keymap.set("i", "<S-\">", function()
+  local success = surround_selection('"', '"')
+  if not success then
+    return '"'
+  end
+end, { expr = true, noremap = true, silent = true, desc = "插入模式：用双引号包围选中文本" })
+
+-- Shift + ' ' 包围选中文本
+vim.keymap.set("i", "<S-'>", function()
+  local success = surround_selection("'", "'")
+  if not success then
+    return "'"
+  end
+end, { expr = true, noremap = true, silent = true, desc = "插入模式：用单引号包围选中文本" })
 
 -- ===========================================================================
 -- 配置结束
