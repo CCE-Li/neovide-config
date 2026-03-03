@@ -384,7 +384,41 @@ vim.keymap.set("n", "<C-S-n>", function()
   print(string.format("已创建新 C++ 文件: %s", new_filename))
 end, vim.tbl_extend("force", map_opts, { desc = "创建新的未命名 C++ 文件（当前标签页）" }))
 
--- ======================== 10.1. 文件重命名快捷键 ==============================
+-- ======================== 10.1. 插入模式文本移动快捷键 ==========================
+-- Shift + Ctrl + 上下方向键：在插入模式下移动选中的文本行
+vim.keymap.set("i", "<C-S-Up>", function()
+  -- 检查是否有选中的文本
+  local mode = vim.api.nvim_get_mode().mode
+  if mode:find('v') or mode:find('V') or mode:find('s') or mode:find('S') then
+    -- 有选中内容：移动选中的文本向上
+    return vim.api.nvim_replace_termcodes('<Esc>:move .-2<CR>==gi', true, true, true)
+  else
+    -- 没有选中内容：移动当前行向上
+    return vim.api.nvim_replace_termcodes('<Esc>:move .-2<CR>==i', true, true, true)
+  end
+end, vim.tbl_extend("force", expr_opts, { desc = "插入模式：向上移动选中文本/当前行" }))
+
+vim.keymap.set("i", "<C-S-Down>", function()
+  -- 检查是否有选中的文本
+  local mode = vim.api.nvim_get_mode().mode
+  if mode:find('v') or mode:find('V') or mode:find('s') or mode:find('S') then
+    -- 有选中内容：移动选中的文本向下
+    return vim.api.nvim_replace_termcodes('<Esc>:move .+1<CR>==gi', true, true, true)
+  else
+    -- 没有选中内容：移动当前行向下
+    return vim.api.nvim_replace_termcodes('<Esc>:move .+1<CR>==i', true, true, true)
+  end
+end, vim.tbl_extend("force", expr_opts, { desc = "插入模式：向下移动选中文本/当前行" }))
+
+-- 可视模式也支持相同的快捷键（保持一致性）
+vim.keymap.set("v", "<C-S-Up>", ":move .-2<CR>==gv", vim.tbl_extend("force", map_opts, { desc = "可视模式：向上移动选中文本" }))
+vim.keymap.set("v", "<C-S-Down>", ":move .+1<CR>==gv", vim.tbl_extend("force", map_opts, { desc = "可视模式：向下移动选中文本" }))
+
+-- 普通模式也支持（单行移动）
+vim.keymap.set("n", "<C-S-Up>", ":move .-2<CR>==", vim.tbl_extend("force", map_opts, { desc = "普通模式：向上移动当前行" }))
+vim.keymap.set("n", "<C-S-Down>", ":move .+1<CR>==", vim.tbl_extend("force", map_opts, { desc = "普通模式：向下移动当前行" }))
+
+-- ======================== 10.2. 文件重命名快捷键 ==============================
 -- Leader + r：重命名当前文件
 vim.keymap.set("n", "<leader>rn", function()
   local old_name = vim.fn.expand("%:t")
@@ -443,3 +477,25 @@ end, vim.tbl_extend("force", map_opts, { desc = "移动文件到其他目录" })
 -- ===========================================================================
 -- 配置结束
 -- ===========================================================================
+
+-- ======================== 11. 自定义命令行为 ==============================
+-- 重写 :new 命令，让它在新标签页中打开文件而不是分屏
+-- 使用 autocmd 在 VimEnter 事件后重定义命令
+vim.api.nvim_create_autocmd("VimEnter", {
+  callback = function()
+    vim.cmd([[
+      " 定义一个以大写字母开头的用户命令 New
+      command! -nargs=? -complete=file New call s:NewInTab(<q-args>)
+      function! s:NewInTab(args)
+        if a:args != ''
+          execute 'tabnew ' . a:args
+        else
+          tabnew
+        endif
+      endfunction
+      
+      " 使用 cabbrev 创建 :new 的缩写，指向我们的 New 命令
+      cabbrev new New
+    ]])
+  end,
+})

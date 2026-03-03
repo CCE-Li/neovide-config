@@ -28,6 +28,7 @@ return {
   
   -- 加载文件管理插件
   require("plugins.file"),
-}
+  
+  }
 
 
