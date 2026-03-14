@@ -9,10 +9,30 @@ return {
       "nvim-tree/nvim-web-devicons",
     },
     config = function()
+      -- 居中配置函数
+      local function get_centered_config()
+        local ui_width = vim.api.nvim_win_get_width(0)
+        local ui_height = vim.api.nvim_win_get_height(0)
+        return {
+          relative = "editor",
+          width = 60,
+          height = 15,
+          row = math.max(0, (ui_height - 15) / 2 - 1),
+          col = math.max(0, (ui_width - 60) / 2 - 1),
+          border = "rounded",
+          style = "minimal",
+        }
+      end
+
       require("nvim-tree").setup({
         -- 启用右键菜单
         view = {
           width = 30,
+          float = {
+            enable = true,
+            quit_on_focus_loss = false,
+            open_win_config = get_centered_config(),
+          },
         },
         renderer = {
           group_empty = true,
@@ -97,15 +117,18 @@ return {
             vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
             vim.api.nvim_buf_set_option(buf, "modifiable", false)
             
-            -- 获取窗口配置
+            -- 获取窗口配置 - 显示在界面中心
             local width = 25
             local height = #lines
+            local ui_width = vim.api.nvim_win_get_width(0)
+            local ui_height = vim.api.nvim_win_get_height(0)
+            
             local win_config = {
-              relative = "cursor",
+              relative = "editor",
               width = width,
               height = height,
-              row = 1,
-              col = 2,
+              row = math.max(0, (ui_height - height) / 2 - 1),
+              col = math.max(0, (ui_width - width) / 2 - 1),
               border = "rounded",
               style = "minimal",
             }
@@ -170,7 +193,7 @@ return {
           vim.keymap.set("n", "<RightMouse>", function()
             local node = api.tree.get_node_under_cursor()
             if node then
-              show_context_menu(node)
+              show_context_menu(node, api)
             end
           end, { buffer = bufnr, noremap = true, silent = true, desc = "NvimTree 右键菜单" })
           
@@ -178,9 +201,45 @@ return {
           vim.keymap.set("n", "m", function()
             local node = api.tree.get_node_under_cursor()
             if node then
-              show_context_menu(node)
+              show_context_menu(node, api)
             end
           end, { buffer = bufnr, noremap = true, silent = true, desc = "NvimTree 菜单" })
+          
+          -- 添加 yazi 风格的快捷键
+          vim.keymap.set("n", "y", function()
+            local node = api.tree.get_node_under_cursor()
+            if node then
+              -- 使用系统默认文件管理器打开当前节点位置
+              vim.fn.system({ "yazi", vim.fn.fnamemodify(node.absolute_path) })
+            end
+          end, { buffer = bufnr, noremap = true, silent = true, desc = "NvimTree 用 yazi 打开" })
+          
+          -- 添加类似 yazi 的操作快捷键
+          vim.keymap.set("n", "o", function()
+            local node = api.tree.get_node_under_cursor()
+            if node then
+              -- 打开文件（类似 yazi 的回车操作）
+              api.node.open.edit(node)
+            end
+          end, { buffer = bufnr, noremap = true, silent = true, desc = "NvimTree 打开文件" })
+          
+          -- 添加类似 yazi 的删除快捷键
+          vim.keymap.set("n", "d", function()
+            local node = api.tree.get_node_under_cursor()
+            if node then
+              -- 删除文件（类似 yazi 的 d 键）
+              api.fs.remove(node)
+            end
+          end, { buffer = bufnr, noremap = true, silent = true, desc = "NvimTree 删除文件" })
+          
+          -- 添加类似 yazi 的重命名快捷键
+          vim.keymap.set("n", "r", function()
+            local node = api.tree.get_node_under_cursor()
+            if node then
+              -- 重命名文件（类似 yazi 的 r 键）
+              api.fs.rename(node)
+            end
+          end, { buffer = bufnr, noremap = true, silent = true, desc = "NvimTree 重命名文件" })
           
           -- 双击展开/折叠文件夹，打开文件
           vim.keymap.set("n", "<2-LeftMouse>", function()
@@ -209,6 +268,11 @@ return {
               end
             end
           end, { buffer = bufnr, noremap = true, silent = true, desc = "NvimTree 回车" })
+          
+          -- ESC键关闭nvim-tree窗口
+          vim.keymap.set("n", "<Esc>", function()
+            api.tree.close()
+          end, { buffer = bufnr, noremap = true, silent = true, desc = "NvimTree ESC关闭窗口" })
         end,
       })
     end,

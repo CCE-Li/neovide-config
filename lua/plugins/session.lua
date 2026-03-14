@@ -41,8 +41,7 @@ return {
       }
       
       dashboard.section.buttons.val = {
-        dashboard.button("f", "📁 查找文件", ":Telescope find_files<CR>"),
-        dashboard.button("p", "📂 切换项目", ":Telescope projects<CR>"),
+        dashboard.button("f", "📁 打开文件夹", ":NvimTreeToggle<CR>"),
         dashboard.button("n", "📝 新建文件", ":ene <BAR>startinsert<CR>"),
         dashboard.button("q", "🚪 退出", ":qa<CR>"),
       }
