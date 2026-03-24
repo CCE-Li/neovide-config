@@ -25,10 +25,10 @@ local ui_opts = {
 
 -- ======================== 2. 缩进配置 (核心，和快捷键联动) =================
 local indent_opts = {
-  tabstop = 4,                 -- Tab 键显示宽度（4个字符）
-  shiftwidth = 4,              -- 自动缩进/>>/<< 时的空格数（和 tabstop 一致）
+  tabstop = 2,                 -- Tab 键显示宽度（2个字符）
+  shiftwidth = 2,              -- 自动缩进/>>/<< 时的空格数（和 tabstop 一致）
   expandtab = true,            -- 将 Tab 键转换为空格（代码规范）
-  softtabstop = 4,             -- 插入模式下 Tab 键实际插入的空格数
+  softtabstop = 2,             -- 插入模式下 Tab 键实际插入的空格数
   smartindent = true,          -- 智能缩进（针对代码块的自动缩进优化）
   autoindent = true,           -- 换行时继承上一行的缩进
 }

@@ -10,9 +10,9 @@ local global_opts = {
   mousemodel = "extend",        -- 插入模式鼠标选中不切换模式
   virtualedit = "onemore",      -- 允许光标移到行尾外
   selectmode = "mouse,key",     -- 选中后输入自动覆盖
-  shiftwidth = 4,               -- 缩进宽度（和 Tab 配置联动）
-  tabstop = 4,
-  softtabstop = 4,
+  shiftwidth = 2,               -- 缩进宽度（和 Tab 配置联动）
+  tabstop = 2,
+  softtabstop = 2,
   expandtab = true,             -- Tab 转为空格
 }
 
@@ -65,7 +65,7 @@ vim.keymap.set(edit_mode, "<S-CR>", "<Esc>o", vim.tbl_extend("force", map_opts, 
 vim.keymap.set(edit_mode, "<C-CR>", "<Esc>O", vim.tbl_extend("force", map_opts, { desc = "上一行开头（插入模式）" }))
 
 -- ======================== 2. Tab/缩进配置 (智能缩进) =======================
--- 插入模式 Tab 键：空行自动缩进 / 非空行插入4空格
+-- 插入模式 Tab 键：空行自动缩进 / 非空行插入2空格
 vim.keymap.set('i', '<Tab>', function()
   local line = vim.api.nvim_get_current_line()
   local trimmed_line = vim.trim(line)
@@ -74,7 +74,7 @@ vim.keymap.set('i', '<Tab>', function()
     -- 空行：执行 Vim 内置自动缩进
     return vim.api.nvim_replace_termcodes('<C-t>', true, true, true)
   else
-    -- 非空行：插入4个空格（匹配全局缩进配置）
+    -- 非空行：插入2个空格（匹配全局缩进配置）
     return string.rep(' ', vim.o.shiftwidth)
   end
 end, vim.tbl_extend("force", expr_opts, { desc = "插入模式：Tab 智能缩进" }))
