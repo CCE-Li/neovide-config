@@ -29,48 +29,7 @@ if bracket then bracket.setup() end -- 括号匹配+自动缩进
 safe_require("modules.lsp")             -- LSP 基础配置
 safe_require("modules.clang-format")   -- Clang-format 配置
 
--- ======================== 2. Neovide 专属配置 ==============================
-if vim.g.neovide then
-  -- -------------------------- 自动聚焦窗口 (启动/快捷键) -------------------
-  local neovide_focus = function()
-    -- 1. Neovide 内置聚焦命令
-    vim.cmd("NeovideFocus")
-    
-    -- 2. 系统级兜底（跨平台兼容）
-    local os_name = vim.loop.os_uname().sysname
-    if os_name == "Windows_NT" then
-      -- Windows：PowerShell 强制激活窗口
-      vim.fn.system([[
-        powershell -Command "$hwnd = (Get-Process neovide -ErrorAction SilentlyContinue).MainWindowHandle; 
-        if ($hwnd) { [User32]::SetForegroundWindow($hwnd) }"
-      ]])
-    elseif os_name == "Darwin" then
-      -- macOS：AppleScript 激活窗口
-      vim.fn.system("osascript -e 'tell application \"Neovide\" to activate'")
-    else
-      -- Linux：wmctrl/xdotool 聚焦（需提前安装）
-      vim.fn.system("wmctrl -a Neovide 2>/dev/null || xdotool search --name Neovide windowactivate 2>/dev/null")
-    end
-  end
-
-  -- 启动时延迟聚焦（适配慢启动场景）
-  vim.defer_fn(neovide_focus, 100) -- 延迟 100ms，避免启动未完成
-
-  -- 手动聚焦快捷键 (Leader + ff)
-  vim.keymap.set('n', '<leader>ff', neovide_focus, {
-    noremap = true,
-    silent = true,
-    desc = "Neovide: 强制聚焦窗口（跨平台兼容）"
-  })
-
-  -- -------------------------- Neovide 语言/编码配置 ------------------------
-  -- 强制全局语言为英文（避免中文乱码/兼容问题）
-  vim.env.LANG = "en_US.UTF-8"
-  vim.env.LC_ALL = "en_US.UTF-8"
-  vim.o.langmenu = "en_US"
-end
-
--- ======================== 3. 全局鼠标行为优化 (全环境生效) =================
+-- ======================== 2. 全局鼠标行为优化 (全环境生效) =================
 -- 注：core.options 中若已定义，此处会覆盖，建议统一移到 core.options 中
 local mouse_opts = {
   mouse = 'a',                  -- 全模式启用鼠标

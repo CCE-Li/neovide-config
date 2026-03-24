@@ -1,22 +1,63 @@
-if vim.g.neovide then
-  -- 基础设置
-  vim.g.neovide_cursor_vfx_mode = "railgun"
-  vim.g.neovide_opacity = 0.95
-  vim.opt.guifont = "Consolas:h14"
-
-  -- F11：切换全屏（无边框效果）
-  vim.keymap.set("n", "<F11>", function()
-    vim.cmd("call neovide#fullscreen#toggle()")
-  end, { desc = "切换全屏模式" })
-
-  -- 自动聚焦窗口
-  vim.api.nvim_create_autocmd("VimEnter", {
-    callback = function()
-      vim.schedule(function()
-        vim.fn.system([[
-          powershell -Command "(New-Object -ComObject WScript.Shell).SendKeys('+')"
-        ]])
-      end)
-    end,
-  })
+if not vim.g.neovide then
+  return
 end
+
+-- Visual defaults: keep the background crisp and prefer readability over effects.
+vim.g.neovide_opacity = 1.0
+vim.g.neovide_normal_opacity = 1.0
+vim.g.neovide_remember_window_size = true
+vim.g.neovide_scale_factor = 1.0
+
+-- Cursor animation: subtle enough for daily editing without the heavy particle trail.
+vim.g.neovide_cursor_vfx_mode = ""
+vim.g.neovide_cursor_animation_length = 0.08
+vim.g.neovide_cursor_trail_size = 0.2
+vim.g.neovide_scroll_animation_length = 0.15
+vim.g.neovide_hide_mouse_when_typing = true
+
+-- Floating windows feel nicer in GUI mode with a bit of depth.
+vim.g.neovide_floating_shadow = true
+vim.g.neovide_floating_z_height = 8
+vim.g.neovide_light_angle_degrees = 45
+vim.g.neovide_light_radius = 5
+vim.g.neovide_floating_corner_radius = 0.2
+
+-- Input handling.
+vim.g.neovide_input_use_logo = false
+vim.g.neovide_input_macos_alt_is_meta = true
+vim.g.neovide_input_ime = true
+
+-- Prefer a single installed Nerd Font family so bold/italic variants resolve cleanly.
+vim.o.guifont = "JetBrainsMono Nerd Font Mono:h14"
+vim.opt.linespace = 0
+
+local focus_window = function()
+  pcall(vim.cmd, "NeovideFocus")
+end
+
+vim.keymap.set("n", "<F11>", function()
+  vim.g.neovide_fullscreen = not vim.g.neovide_fullscreen
+end, { desc = "切换全屏模式" })
+
+vim.keymap.set("n", "<leader>ff", focus_window, {
+  noremap = true,
+  silent = true,
+  desc = "Neovide: 聚焦窗口",
+})
+
+-- Let IME follow editor mode so normal-mode commands stay predictable.
+local ime_group = vim.api.nvim_create_augroup("NeovideIME", { clear = true })
+vim.api.nvim_create_autocmd({ "InsertEnter", "CmdlineEnter" }, {
+  group = ime_group,
+  callback = function(args)
+    local enabled = args.event == "InsertEnter" or vim.fn.getcmdtype():match("[/?]")
+    vim.g.neovide_input_ime = not not enabled
+  end,
+})
+
+vim.api.nvim_create_autocmd({ "InsertLeave", "CmdlineLeave" }, {
+  group = ime_group,
+  callback = function()
+    vim.g.neovide_input_ime = false
+  end,
+})

@@ -40,6 +40,7 @@ local edit_opts = {
   backspace = "indent,eol,start", -- 退格键可删除缩进/行尾/行首字符
   virtualedit = "onemore",     -- 允许光标移到行尾字符外（选中更友好）
   selectmode = "mouse,key",    -- 鼠标/键盘选中后输入自动覆盖（编辑器习惯）
+  keymodel = "startsel,stopsel", -- Shift+方向键开始/扩展选择，普通方向键退出选择
   mouse = "a",                 -- 全模式启用鼠标支持
   mousemodel = "extend",       -- 插入模式鼠标选中不切换到可视模式
 }

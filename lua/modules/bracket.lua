@@ -13,6 +13,16 @@ local function get_line(row)
   return vim.api.nvim_buf_get_lines(0, row, row + 1, false)[1] or ""
 end
 
+local function clamp_cursor_col(row, col)
+  local line = get_line(row)
+  return math.max(0, math.min(col, #line))
+end
+
+local function clamp_row(row)
+  local line_count = vim.api.nvim_buf_line_count(0)
+  return math.max(0, math.min(row, math.max(0, line_count - 1)))
+end
+
 --------------------------------------------------
 -- 智能回车
 --------------------------------------------------
@@ -125,15 +135,77 @@ local function delete_pair()
 end
 
 --------------------------------------------------
+-- 包裹选中文本
+--------------------------------------------------
+local function surround_selection(open_char)
+  local pair_map = {
+    ["("] = ")",
+    ["["] = "]",
+    ["{"] = "}",
+    ['"'] = '"',
+    ["'"] = "'",
+  }
+
+  local close_char = pair_map[open_char]
+  if not close_char then
+    return
+  end
+
+  local mode = vim.fn.mode()
+  local start_mark = vim.api.nvim_buf_get_mark(0, "<")
+  local end_mark = vim.api.nvim_buf_get_mark(0, ">")
+
+  local start_row = clamp_row(start_mark[1] - 1)
+  local start_col = math.max(0, start_mark[2])
+  local end_row = clamp_row(end_mark[1] - 1)
+  local end_col = math.max(0, end_mark[2])
+
+  if start_row > end_row or (start_row == end_row and start_col > end_col) then
+    start_row, end_row = end_row, start_row
+    start_col, end_col = end_col, start_col
+  end
+
+  -- Linewise visual selections should wrap the full lines.
+  if mode == "V" or mode == "S" then
+    start_col = 0
+    local end_line = get_line(end_row)
+    end_col = #end_line
+  else
+    start_col = clamp_cursor_col(start_row, start_col)
+    end_col = clamp_cursor_col(end_row, end_col + 1)
+  end
+
+  vim.api.nvim_buf_set_text(0, end_row, end_col, end_row, end_col, { close_char })
+  vim.api.nvim_buf_set_text(0, start_row, start_col, start_row, start_col, { open_char })
+
+  local cursor_col = clamp_cursor_col(start_row, start_col + 1)
+  pcall(vim.api.nvim_win_set_cursor, 0, { start_row + 1, cursor_col })
+end
+
+--------------------------------------------------
 -- setup
 --------------------------------------------------
 function M.setup()
   local brackets = { "(", ")", "[", "]", "{", "}", '"', "'" }
+  local surround_chars = { "(", "[", "{", '"', "'" }
 
   for _, char in ipairs(brackets) do
     vim.keymap.set("i", char, function()
       return insert_pair(char)
     end, { expr = true, noremap = true })
+  end
+
+  for _, char in ipairs(surround_chars) do
+    vim.keymap.set("x", char, function()
+      surround_selection(char)
+    end, { noremap = true, silent = true })
+
+    vim.keymap.set("s", char, function()
+      vim.schedule(function()
+        surround_selection(char)
+      end)
+      return vim.keycode("<Esc>")
+    end, { expr = true, noremap = true, silent = true })
   end
 
   vim.keymap.set("i", "<BS>", function()

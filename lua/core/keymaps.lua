@@ -86,6 +86,25 @@ vim.keymap.set("i", "<C-a>", function()
   return vim.api.nvim_replace_termcodes('<Esc>ggVG', true, true, true)
 end, vim.tbl_extend("force", expr_opts, { desc = "插入模式：全选文件内容" }))
 
+-- ======================== 2.2. 单词级文本选择 ==============================
+-- Ctrl + Shift + Left/Right：像常见编辑器一样按单词扩展选择
+vim.keymap.set("x", "<C-S-Left>", "b", vim.tbl_extend("force", map_opts, {
+  desc = "按单词向左扩展选择",
+}))
+
+vim.keymap.set("x", "<C-S-Right>", "e", vim.tbl_extend("force", map_opts, {
+  desc = "按单词向右扩展选择",
+}))
+
+-- 从 Shift+方向键进入的是 select 模式，先切到 visual 再做单词扩展，避免被 keymodel 停止选择
+vim.keymap.set("s", "<C-S-Left>", "<C-g>b", vim.tbl_extend("force", map_opts, {
+  desc = "按单词向左扩展选择",
+}))
+
+vim.keymap.set("s", "<C-S-Right>", "<C-g>e", vim.tbl_extend("force", map_opts, {
+  desc = "按单词向右扩展选择",
+}))
+
 -- ======================== 3. 复制/粘贴 (Ctrl+C/Ctrl+V) =====================
 -- -------------------------- 复制 (Ctrl+C) ----------------------------------
 -- 可视模式：复制选中内容到系统剪贴板
@@ -131,9 +150,6 @@ vim.keymap.set(window_mode, '<A-S-C-Up>', '<C-w>2+', resize_opts)
 
 -- -------------------------- Neovide 兼容配置 -------------------------------
 if vim.g.neovide then
-  vim.g.neovide_input_macos_alt_is_meta = true -- macOS Alt 映射为 Meta
-  vim.g.neovide_input_use_logo = false         -- 避免 Cmd/Win 键干扰
-
   -- 兼容键码（部分终端识别为 <M-S-h> 而非 <A-S-h>）
   local neovide_opts = vim.tbl_extend("force", map_opts, { desc = "Neovide 兼容：调整窗口大小" })
   vim.keymap.set(window_mode, '<M-S-h>', '<C-w>2<', neovide_opts)
@@ -191,8 +207,14 @@ pcall(function()
 end)
 
 -- ======================== 6. 插件快捷键 ===================================
--- Leader + y：打开 Yazi 文件管理器
-vim.keymap.set("n", "<leader>y", "<cmd>Yazi<cr>", vim.tbl_extend("force", map_opts, { desc = "打开 Yazi 文件管理器" }))
+-- Leader + y：如果安装了 yazi，则在终端中打开
+vim.keymap.set("n", "<leader>y", function()
+  if vim.fn.executable("yazi") == 1 then
+    vim.fn.system({ "yazi" })
+  else
+    vim.notify("未找到 yazi 可执行文件", vim.log.levels.WARN)
+  end
+end, vim.tbl_extend("force", map_opts, { desc = "打开 Yazi 文件管理器" }))
 
 -- F2：切换 NvimTree 文件管理器
 vim.keymap.set('n', '<F2>', ':NvimTreeToggle<CR>', vim.tbl_extend("force", map_opts, { desc = "切换 NvimTree 显示/隐藏" }))
@@ -289,8 +311,8 @@ vim.keymap.set("n", "<C-S-Tab>", function()
   vim.cmd("tabprevious")
 end, vim.tbl_extend("force", map_opts, { desc = "切换到上一个标签页" }))
 
--- Ctrl + w：关闭当前标签页
-vim.keymap.set("n", "<C-w>", function()
+-- Alt + q：关闭当前标签页
+vim.keymap.set("n", "<M-q>", function()
   vim.cmd("tabclose")
 end, vim.tbl_extend("force", map_opts, { desc = "关闭当前标签页" }))
 

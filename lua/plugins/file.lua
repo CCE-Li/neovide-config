@@ -209,8 +209,11 @@ return {
           vim.keymap.set("n", "y", function()
             local node = api.tree.get_node_under_cursor()
             if node then
-              -- 使用系统默认文件管理器打开当前节点位置
-              vim.fn.system({ "yazi", vim.fn.fnamemodify(node.absolute_path) })
+              if vim.fn.executable("yazi") == 1 then
+                vim.fn.system({ "yazi", vim.fn.fnamemodify(node.absolute_path) })
+              else
+                vim.notify("未找到 yazi 可执行文件", vim.log.levels.WARN)
+              end
             end
           end, { buffer = bufnr, noremap = true, silent = true, desc = "NvimTree 用 yazi 打开" })
           
