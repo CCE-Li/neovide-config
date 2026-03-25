@@ -27,7 +27,7 @@ vim.g.neovide_floating_blur_amount_y = 2.0
 -- Input handling.
 vim.g.neovide_input_use_logo = false
 vim.g.neovide_input_macos_alt_is_meta = true
-vim.g.neovide_input_ime = true
+vim.g.neovide_input_ime = false
 
 -- Prefer a single installed Nerd Font family so bold/italic variants resolve cleanly.
 vim.o.guifont = "JetBrainsMono Nerd Font Mono:h14"
@@ -65,6 +65,13 @@ vim.keymap.set("n", "<leader>ff", focus_window, {
 
 -- Let IME follow editor mode so normal-mode commands stay predictable.
 local ime_group = vim.api.nvim_create_augroup("NeovideIME", { clear = true })
+vim.api.nvim_create_autocmd("VimEnter", {
+  group = ime_group,
+  callback = function()
+    vim.g.neovide_input_ime = false
+  end,
+})
+
 vim.api.nvim_create_autocmd({ "InsertEnter", "CmdlineEnter" }, {
   group = ime_group,
   callback = function(args)
