@@ -2,9 +2,9 @@ if not vim.g.neovide then
   return
 end
 
--- Visual defaults: keep the background crisp and prefer readability over effects.
-vim.g.neovide_opacity = 1.0
-vim.g.neovide_normal_opacity = 1.0
+-- Visual defaults: use partial transparency in GUI mode.
+vim.g.neovide_opacity = 0.3
+vim.g.neovide_normal_opacity = 0.3
 vim.g.neovide_remember_window_size = true
 vim.g.neovide_scale_factor = 1.0
 
@@ -21,6 +21,8 @@ vim.g.neovide_floating_z_height = 8
 vim.g.neovide_light_angle_degrees = 45
 vim.g.neovide_light_radius = 5
 vim.g.neovide_floating_corner_radius = 0.2
+vim.g.neovide_floating_blur_amount_x = 2.0
+vim.g.neovide_floating_blur_amount_y = 2.0
 
 -- Input handling.
 vim.g.neovide_input_use_logo = false
@@ -38,6 +40,22 @@ end
 vim.keymap.set("n", "<F11>", function()
   vim.g.neovide_fullscreen = not vim.g.neovide_fullscreen
 end, { desc = "切换全屏模式" })
+
+local change_opacity = function(delta)
+  local next_value = (vim.g.neovide_opacity or 1.0) + delta
+  next_value = math.max(0.3, math.min(1.0, next_value))
+  vim.g.neovide_opacity = next_value
+  vim.g.neovide_normal_opacity = next_value
+  vim.notify(string.format("Neovide 透明度: %.0f%%", next_value * 100), vim.log.levels.INFO)
+end
+
+vim.keymap.set("n", "<F12>", function()
+  change_opacity(-0.05)
+end, { desc = "降低 Neovide 透明度" })
+
+vim.keymap.set("n", "<S-F12>", function()
+  change_opacity(0.05)
+end, { desc = "提高 Neovide 透明度" })
 
 vim.keymap.set("n", "<leader>ff", focus_window, {
   noremap = true,

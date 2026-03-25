@@ -321,8 +321,24 @@ pcall(function()
 end)
 
 -- ======================== 6. 插件快捷键 ===================================
--- Leader + y：打开 Yazi 文件管理器
-vim.keymap.set("n", "<leader>y", "<cmd>Yazi<cr>", vim.tbl_extend("force", map_opts, { desc = "打开 Yazi 文件管理器" }))
+-- F1：在终端缓冲区中打开 Yazi（兼容 Neovide）
+vim.keymap.set("n", "<F1>", function()
+  if vim.fn.executable("yazi") ~= 1 then
+    vim.notify("未找到 yazi 可执行文件", vim.log.levels.WARN)
+    return
+  end
+
+  local target_dir = vim.fn.expand("%:p:h")
+  if target_dir == "" then
+    target_dir = vim.loop.cwd()
+  end
+
+  vim.cmd("botright split")
+  vim.cmd("resize 18")
+  vim.cmd("terminal")
+  vim.fn.chansend(vim.b.terminal_job_id, { "cd /d " .. target_dir .. "\r", "yazi\r" })
+  vim.cmd("startinsert")
+end, vim.tbl_extend("force", map_opts, { desc = "打开 Yazi 文件管理器" }))
 
 -- F2：切换 NvimTree 文件管理器
 vim.keymap.set('n', '<F2>', ':NvimTreeToggle<CR>', vim.tbl_extend("force", map_opts, { desc = "切换 NvimTree 显示/隐藏" }))
