@@ -39,6 +39,7 @@ return {
       },
       {
         "neovim/nvim-lspconfig",
+        cmd = { "LspInfo" },
         event = { "BufReadPre", "BufNewFile" },
       }
     },
