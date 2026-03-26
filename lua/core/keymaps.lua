@@ -64,6 +64,16 @@ vim.keymap.set("i", "<C-S-z>", "<C-o><C-r>", vim.tbl_extend("force", map_opts, {
 vim.keymap.set(edit_mode, "<S-CR>", "<Esc>o", vim.tbl_extend("force", map_opts, { desc = "下一行开头（插入模式）" }))
 vim.keymap.set(edit_mode, "<C-CR>", "<Esc>O", vim.tbl_extend("force", map_opts, { desc = "上一行开头（插入模式）" }))
 
+-- -------------------------- 复制当前行到下一行 (Ctrl+D) --------------------
+vim.keymap.set("i", "<C-d>", function()
+  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  local line = vim.api.nvim_get_current_line()
+
+  vim.api.nvim_buf_set_lines(0, row, row, false, { line })
+  vim.api.nvim_win_set_cursor(0, { row + 1, col })
+  vim.cmd("startinsert")
+end, vim.tbl_extend("force", map_opts, { desc = "插入模式：复制当前行到下一行" }))
+
 -- ======================== 2. Tab/缩进配置 (智能缩进) =======================
 -- 插入模式 Tab 键：空行自动缩进 / 非空行插入2空格
 vim.keymap.set('i', '<Tab>', function()
