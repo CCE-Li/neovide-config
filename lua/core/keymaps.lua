@@ -62,6 +62,106 @@ local function open_pwsh_command(command)
   return vim.fn.system(full_cmd)
 end
 
+local function compile_cpp_file(file_path)
+  local exe_path = vim.fn.fnamemodify(file_path, ":r") .. ".exe"
+  local compile_cmd = string.format(
+    "g++ -std=c++17 -O2 '%s' -o '%s' 2>&1",
+    pwsh_escape_single_quotes(file_path),
+    pwsh_escape_single_quotes(exe_path)
+  )
+  local output = vim.fn.system(compile_cmd)
+  return vim.v.shell_error == 0, exe_path, output
+end
+
+local function list_txt_files(dir)
+  local files = vim.fn.globpath(dir, "*.txt", false, true)
+  table.sort(files, function(a, b)
+    return a:lower() < b:lower()
+  end)
+  return files
+end
+
+local function open_input_picker(on_select)
+  local target_dir = current_buffer_dir()
+  local txt_files = list_txt_files(target_dir)
+
+  if #txt_files == 0 then
+    vim.notify("当前目录下没有 .txt 输入文件", vim.log.levels.WARN)
+    return
+  end
+
+  local display_lines = {}
+  for _, file in ipairs(txt_files) do
+    table.insert(display_lines, vim.fn.fnamemodify(file, ":t"))
+  end
+
+  local width = 0
+  for _, line in ipairs(display_lines) do
+    width = math.max(width, vim.fn.strdisplaywidth(line))
+  end
+  width = math.max(width + 4, 28)
+
+  local height = math.min(#display_lines, math.max(4, vim.o.lines - 6))
+  local row = math.floor((vim.o.lines - height) / 2 - 1)
+  local col = math.floor((vim.o.columns - width) / 2)
+
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, display_lines)
+
+  vim.bo[buf].bufhidden = "wipe"
+  vim.bo[buf].buftype = "nofile"
+  vim.bo[buf].swapfile = false
+  vim.bo[buf].modifiable = false
+  vim.bo[buf].filetype = "f6_input_picker"
+
+  local win = vim.api.nvim_open_win(buf, true, {
+    relative = "editor",
+    row = math.max(row, 1),
+    col = math.max(col, 0),
+    width = width,
+    height = height,
+    style = "minimal",
+    border = "rounded",
+    title = " 选择输入样例 ",
+    title_pos = "center",
+  })
+
+  vim.wo[win].cursorline = true
+  vim.wo[win].number = false
+  vim.wo[win].relativenumber = false
+  vim.wo[win].signcolumn = "no"
+
+  local function close_picker()
+    if vim.api.nvim_win_is_valid(win) then
+      vim.api.nvim_win_close(win, true)
+    end
+  end
+
+  local function confirm_selection()
+    local line = vim.api.nvim_win_get_cursor(win)[1]
+    local selected = txt_files[line]
+    close_picker()
+    if selected then
+      on_select(selected)
+    end
+  end
+
+  local function move_cursor(delta)
+    local line = vim.api.nvim_win_get_cursor(win)[1]
+    local next_line = math.max(1, math.min(#txt_files, line + delta))
+    vim.api.nvim_win_set_cursor(win, { next_line, 0 })
+  end
+
+  local picker_opts = { buffer = buf, noremap = true, silent = true, nowait = true }
+  vim.keymap.set("n", "j", function() move_cursor(1) end, picker_opts)
+  vim.keymap.set("n", "k", function() move_cursor(-1) end, picker_opts)
+  vim.keymap.set("n", "<Down>", function() move_cursor(1) end, picker_opts)
+  vim.keymap.set("n", "<Up>", function() move_cursor(-1) end, picker_opts)
+  vim.keymap.set("n", "<CR>", confirm_selection, picker_opts)
+  vim.keymap.set("n", "q", close_picker, picker_opts)
+  vim.keymap.set("n", "<Esc>", close_picker, picker_opts)
+end
+
 
 local function close_current_entry(force)
   local current_buf = vim.api.nvim_get_current_buf()
@@ -252,13 +352,32 @@ end, vim.tbl_extend("force", map_opts, { desc = "ACM：编译并运行 C++ 文�
 
 -- F6：直接运行已编译的 exe 文件
 vim.keymap.set(acm_mode, "<F6>", function()
-  local exe_name = vim.fn.expand("%:r") .. ".exe"
-  local run_cmd = string.format(
-    "& '.\\%s'; Write-Host ''; Read-Host '按回车键退出'",
-    pwsh_escape_single_quotes(exe_name)
-  )
-  open_pwsh_command(run_cmd)
-end, vim.tbl_extend("force", map_opts, { desc = "ACM：运行已编译的 C++ 程序" }))
+  vim.cmd("w")
+
+  local file_path = vim.fn.expand("%:p")
+  if file_path == "" or vim.fn.expand("%:e") ~= "cpp" then
+    vim.notify("F6 仅支持当前 C++ 文件", vim.log.levels.WARN)
+    return
+  end
+
+  open_input_picker(function(input_file)
+    local ok, exe_path, output = compile_cpp_file(file_path)
+    if not ok then
+      vim.notify("编译失败，请查看消息输出", vim.log.levels.ERROR)
+      print("编译失败：")
+      print(output)
+      return
+    end
+
+    local run_cmd = string.format(
+      "%s; cmd /c '\"%s\" < \"%s\"'; Write-Host ''; Read-Host '按回车键退出'",
+      pwsh_cd_command(vim.fn.fnamemodify(file_path, ":h")),
+      exe_path,
+      input_file
+    )
+    open_pwsh_command(run_cmd)
+  end)
+end, vim.tbl_extend("force", map_opts, { desc = "ACM：选择输入样例后编译运行 C++ 程序" }))
 
 -- F9：调试 (gdb)
 vim.keymap.set(acm_mode, "<F9>", ":w<CR>:!gdb %:r.exe<CR>", vim.tbl_extend("force", map_opts, { desc = "ACM：调试 C++ 程序" }))
