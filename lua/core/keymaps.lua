@@ -62,6 +62,29 @@ local function open_pwsh_command(command)
   return vim.fn.system(full_cmd)
 end
 
+
+local function close_current_entry(force)
+  local current_buf = vim.api.nvim_get_current_buf()
+  local listed_buffers = vim.tbl_filter(function(buf)
+    return vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buflisted
+  end, vim.api.nvim_list_bufs())
+
+  if #listed_buffers <= 1 then
+    vim.cmd(force and "quitall!" or "confirm quitall")
+    return
+  end
+
+  local delete_cmd = string.format("%sbdelete %d", force and "" or "confirm ", current_buf)
+  local ok = pcall(vim.cmd, delete_cmd)
+  if not ok then
+    return
+  end
+end
+
+vim.api.nvim_create_user_command("CloseCurrentEntry", function(opts)
+  close_current_entry(opts.bang)
+end, { bang = true })
+
 -- ======================== 1. 基础编辑快捷键 (Ctrl+方向键/删除/撤销) ========
 local edit_mode = { "n", "i" } -- 同时生效于普通/插入模式
 
@@ -569,6 +592,8 @@ vim.api.nvim_create_autocmd("VimEnter", {
       
       " 使用 cabbrev 创建 :new 的缩写，指向我们的 New 命令
       cabbrev new New
+      cnoreabbrev <expr> q getcmdtype() == ':' && getcmdline() == 'q' ? 'CloseCurrentEntry' : 'q'
+      cnoreabbrev <expr> q! getcmdtype() == ':' && getcmdline() == 'q!' ? 'CloseCurrentEntry!' : 'q!'
     ]])
   end,
 })
