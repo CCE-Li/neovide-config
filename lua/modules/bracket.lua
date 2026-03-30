@@ -23,6 +23,31 @@ local function clamp_row(row)
   return math.max(0, math.min(row, math.max(0, line_count - 1)))
 end
 
+local function get_active_selection_bounds(mode)
+  local visual_start = vim.fn.getpos("v")
+  local cursor = vim.api.nvim_win_get_cursor(0)
+
+  local start_row = clamp_row((visual_start[2] or 1) - 1)
+  local start_col = math.max(0, (visual_start[3] or 1) - 1)
+  local end_row = clamp_row((cursor[1] or 1) - 1)
+  local end_col = math.max(0, cursor[2] or 0)
+
+  if start_row > end_row or (start_row == end_row and start_col > end_col) then
+    start_row, end_row = end_row, start_row
+    start_col, end_col = end_col, start_col
+  end
+
+  if mode == "V" or mode == "S" then
+    start_col = 0
+    end_col = #get_line(end_row)
+  else
+    start_col = clamp_cursor_col(start_row, start_col)
+    end_col = clamp_cursor_col(end_row, end_col + 1)
+  end
+
+  return start_row, start_col, end_row, end_col
+end
+
 --------------------------------------------------
 -- 智能回车
 --------------------------------------------------
@@ -152,28 +177,7 @@ local function surround_selection(open_char)
   end
 
   local mode = vim.fn.mode()
-  local start_mark = vim.api.nvim_buf_get_mark(0, "<")
-  local end_mark = vim.api.nvim_buf_get_mark(0, ">")
-
-  local start_row = clamp_row(start_mark[1] - 1)
-  local start_col = math.max(0, start_mark[2])
-  local end_row = clamp_row(end_mark[1] - 1)
-  local end_col = math.max(0, end_mark[2])
-
-  if start_row > end_row or (start_row == end_row and start_col > end_col) then
-    start_row, end_row = end_row, start_row
-    start_col, end_col = end_col, start_col
-  end
-
-  -- Linewise visual selections should wrap the full lines.
-  if mode == "V" or mode == "S" then
-    start_col = 0
-    local end_line = get_line(end_row)
-    end_col = #end_line
-  else
-    start_col = clamp_cursor_col(start_row, start_col)
-    end_col = clamp_cursor_col(end_row, end_col + 1)
-  end
+  local start_row, start_col, end_row, end_col = get_active_selection_bounds(mode)
 
   vim.api.nvim_buf_set_text(0, end_row, end_col, end_row, end_col, { close_char })
   vim.api.nvim_buf_set_text(0, start_row, start_col, start_row, start_col, { open_char })
@@ -201,11 +205,12 @@ function M.setup()
     end, { noremap = true, silent = true })
 
     vim.keymap.set("s", char, function()
+      local visual_keys = vim.keycode("<C-g>")
+      vim.api.nvim_feedkeys(visual_keys, "n", false)
       vim.schedule(function()
         surround_selection(char)
       end)
-      return vim.keycode("<Esc>")
-    end, { expr = true, noremap = true, silent = true })
+    end, { noremap = true, silent = true })
   end
 
   vim.keymap.set("i", "<BS>", function()
