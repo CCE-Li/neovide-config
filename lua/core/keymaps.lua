@@ -32,6 +32,36 @@ local map_opts = {
 -- 表达式映射参数 (用于 Tab/退格等动态逻辑)
 local expr_opts = vim.tbl_extend("force", map_opts, { expr = true })
 
+local function pwsh_escape_single_quotes(value)
+  return tostring(value):gsub("'", "''")
+end
+
+local function pwsh_cd_command(dir)
+  return "Set-Location -LiteralPath '" .. pwsh_escape_single_quotes(dir) .. "'"
+end
+
+local function current_buffer_dir()
+  if vim.bo.buftype == "terminal" then
+    return vim.fn.getcwd()
+  end
+
+  local file_path = vim.fn.expand("%:p")
+  if file_path == nil or file_path == "" or file_path:match("^term://") then
+    return vim.fn.getcwd()
+  end
+
+  return vim.fn.fnamemodify(file_path, ":h")
+end
+
+local function open_pwsh_command(command)
+  local escaped = command:gsub('"', '`"')
+  local full_cmd = string.format(
+    'Start-Process pwsh -ArgumentList "-NoExit", "-Command", "%s"',
+    escaped
+  )
+  return vim.fn.system(full_cmd)
+end
+
 -- ======================== 1. 基础编辑快捷键 (Ctrl+方向键/删除/撤销) ========
 local edit_mode = { "n", "i" } -- 同时生效于普通/插入模式
 
@@ -181,10 +211,10 @@ vim.keymap.set(acm_mode, "<F5>", function()
 
   if vim.v.shell_error == 0 then
     local run_cmd = string.format(
-      "start cmd /k \"chcp 65001 && .\\%s && echo. && echo 按回车键退出... && pause > nul && exit\"",
-      exe_name
+      "& '.\\%s'; Write-Host ''; Read-Host '按回车键退出'",
+      pwsh_escape_single_quotes(exe_name)
     )
-    vim.fn.system(run_cmd)
+    open_pwsh_command(run_cmd)
   else
     print("编译失败：")
     print(output)
@@ -195,10 +225,10 @@ end, vim.tbl_extend("force", map_opts, { desc = "ACM：编译并运行 C++ 文�
 vim.keymap.set(acm_mode, "<F6>", function()
   local exe_name = vim.fn.expand("%:r") .. ".exe"
   local run_cmd = string.format(
-    "start cmd /k \"chcp 65001 && .\\%s && echo. && echo 按回车键退出... && pause > nul && exit\"",
-    exe_name
+    "& '.\\%s'; Write-Host ''; Read-Host '按回车键退出'",
+    pwsh_escape_single_quotes(exe_name)
   )
-  vim.fn.system(run_cmd)
+  open_pwsh_command(run_cmd)
 end, vim.tbl_extend("force", map_opts, { desc = "ACM：运行已编译的 C++ 程序" }))
 
 -- F9：调试 (gdb)
@@ -224,10 +254,7 @@ vim.keymap.set("n", "<F1>", function()
     return
   end
 
-  local target_dir = vim.fn.expand("%:p:h")
-  if target_dir == "" then
-    target_dir = vim.loop.cwd()
-  end
+  local target_dir = current_buffer_dir()
 
   vim.cmd("botright split")
   vim.cmd("resize 18")
@@ -343,12 +370,14 @@ end, vim.tbl_extend("force", map_opts, { desc = "关闭当前标签页" }))
 vim.keymap.set("n", "<leader>ww", function()
   local choice = vim.fn.inputlist({
     "窗口操作:",
-    "1. 水平分割",
-    "2. 垂直分割", 
-    "3. 关闭当前窗口",
-    "4. 仅保留当前窗口",
-    "5. 切换窗口",
-    "6. 窗口均等"
+    "1. 水平分割<leader> + s",
+    "2. 垂直分割<leader> + v", 
+    "3. 关闭当前窗口<leader> + c",
+    "4. 仅保留当前窗口<leader> + o",
+    "5. 切换窗口<leader> + w",
+    "6. 窗口均等<leader> + =",
+    "7. 最大化/还原当前窗格<leader> + z",
+    "8. 底部终端窗格<leader> + t"
   })
   
   if choice == 1 then vim.cmd("split") end
@@ -357,6 +386,8 @@ vim.keymap.set("n", "<leader>ww", function()
   if choice == 4 then vim.cmd("only") end
   if choice == 5 then vim.cmd("wincmd w") end
   if choice == 6 then vim.cmd("wincmd =") end
+  if choice == 7 then require("modules.panes").toggle_zoom() end
+  if choice == 8 then require("modules.panes").open_terminal_bottom() end
 end, vim.tbl_extend("force", map_opts, { desc = "窗口操作菜单" }))
 
 -- 鼠标中键关闭窗口
@@ -541,3 +572,4 @@ vim.api.nvim_create_autocmd("VimEnter", {
     ]])
   end,
 })
+

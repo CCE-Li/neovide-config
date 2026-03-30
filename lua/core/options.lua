@@ -21,6 +21,8 @@ local ui_opts = {
   showcmd = true,              -- 显示正在输入的命令（新手友好）
   laststatus = 3,              -- 全局统一状态栏（多窗口时更整洁）
   termguicolors = true,        -- 启用真彩色（终端需支持，显示主题完整配色）
+  splitright = true,           -- 垂直分屏默认开在右侧
+  splitbelow = true,           -- 水平分屏默认开在下方
 }
 
 -- ======================== 2. 缩进配置 (核心，和快捷键联动) =================
@@ -63,6 +65,29 @@ local clipboard_opts = {
   clipboard = "unnamedplus",   -- 联动系统剪贴板（Windows/macOS/Linux通用）
 }
 
+-- ======================== 6. Windows Shell 配置 ============================
+local shell_opts = {}
+
+if vim.fn.has("win32") == 1 then
+  local pwsh = nil
+  if vim.fn.executable("pwsh") == 1 then
+    pwsh = "pwsh"
+  elseif vim.fn.executable("powershell") == 1 then
+    pwsh = "powershell"
+  end
+
+  if pwsh then
+    shell_opts = {
+      shell = pwsh,
+      shellcmdflag = "-NoLogo -NoProfile -ExecutionPolicy RemoteSigned -Command",
+      shellredir = "-RedirectStandardOutput %s -NoNewWindow -Wait",
+      shellpipe = "2>&1 | Out-File -Encoding UTF8 %s; exit $LastExitCode",
+      shellquote = "",
+      shellxquote = "",
+    }
+  end
+end
+
 -- ======================== 应用所有配置 ====================================
 -- 合并所有配置项
 local all_opts = vim.tbl_deep_extend("force",
@@ -70,7 +95,8 @@ local all_opts = vim.tbl_deep_extend("force",
   indent_opts,
   edit_opts,
   perf_opts,
-  clipboard_opts
+  clipboard_opts,
+  shell_opts
 )
 
 -- 批量应用配置

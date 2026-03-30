@@ -25,6 +25,9 @@ return {
   
   -- 加载界面美化插件
   require("plugins.ui"),
+
+  -- 加载窗格管理插件
+  require("plugins.panes"),
   
   -- 加载文件管理插件
   require("plugins.file"),
