@@ -632,8 +632,12 @@ vim.keymap.set("i", "<C-S-Down>", function()
 end, vim.tbl_extend("force", expr_opts, { desc = "插入模式：向下移动选中文本/当前行" }))
 
 -- 可视模式也支持相同的快捷键（保持一致性）
-vim.keymap.set("v", "<C-S-Up>", ":move .-2<CR>==gv", vim.tbl_extend("force", map_opts, { desc = "可视模式：向上移动选中文本" }))
-vim.keymap.set("v", "<C-S-Down>", ":move .+1<CR>==gv", vim.tbl_extend("force", map_opts, { desc = "可视模式：向下移动选中文本" }))
+vim.keymap.set("x", "<C-S-Up>", ":move '<-2<CR>gv=gv", vim.tbl_extend("force", map_opts, { desc = "可视模式：向上移动选中文本" }))
+vim.keymap.set("x", "<C-S-Down>", ":move '>+1<CR>gv=gv", vim.tbl_extend("force", map_opts, { desc = "可视模式：向下移动选中文本" }))
+
+-- Select 模式下也走同样的选区边界逻辑
+vim.keymap.set("s", "<C-S-Up>", "<C-g>:move '<-2<CR>gv=gv", vim.tbl_extend("force", map_opts, { desc = "选择模式：向上移动选中文本" }))
+vim.keymap.set("s", "<C-S-Down>", "<C-g>:move '>+1<CR>gv=gv", vim.tbl_extend("force", map_opts, { desc = "选择模式：向下移动选中文本" }))
 
 -- 普通模式也支持（单行移动）
 vim.keymap.set("n", "<C-S-Up>", ":move .-2<CR>==", vim.tbl_extend("force", map_opts, { desc = "普通模式：向上移动当前行" }))
