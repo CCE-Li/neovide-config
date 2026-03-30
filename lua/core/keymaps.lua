@@ -340,7 +340,7 @@ vim.keymap.set(acm_mode, "<F5>", function()
 
   if vim.v.shell_error == 0 then
     local run_cmd = string.format(
-      "& '.\\%s'; Write-Host ''; Read-Host '按回车键退出'",
+      "& '.\\%s'; Write-Host ''; Write-Host '按回车键退出...'; [void][System.Console]::ReadLine(); exit",
       pwsh_escape_single_quotes(exe_name)
     )
     open_pwsh_command(run_cmd)
@@ -370,7 +370,7 @@ vim.keymap.set(acm_mode, "<F6>", function()
     end
 
     local run_cmd = string.format(
-      "%s; cmd /c '\"%s\" < \"%s\"'; Write-Host ''; Read-Host '按回车键退出'",
+      "%s; cmd /c '\"%s\" < \"%s\"'; Write-Host ''; Write-Host '按回车键退出...'; [void][System.Console]::ReadLine(); exit",
       pwsh_cd_command(vim.fn.fnamemodify(file_path, ":h")),
       exe_path,
       input_file
