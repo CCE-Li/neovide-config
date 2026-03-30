@@ -65,9 +65,15 @@ end
 
 local function close_current_entry(force)
   local current_buf = vim.api.nvim_get_current_buf()
+  local wins_in_tab = vim.api.nvim_tabpage_list_wins(0)
   local listed_buffers = vim.tbl_filter(function(buf)
     return vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buflisted
   end, vim.api.nvim_list_bufs())
+
+  if #wins_in_tab > 1 then
+    vim.cmd(force and "q!" or "q")
+    return
+  end
 
   if #listed_buffers <= 1 then
     vim.cmd(force and "quitall!" or "confirm quitall")
