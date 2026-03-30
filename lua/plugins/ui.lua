@@ -77,4 +77,41 @@ return {
     dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-mini/mini.nvim' },
     opts = {},
   },
+
+  -- 缩进引导线
+  {
+    "lukas-reineke/indent-blankline.nvim",
+    main = "ibl",
+    event = { "BufReadPre", "BufNewFile" },
+    opts = {
+      indent = {
+        char = "│",
+        tab_char = "│",
+      },
+      scope = {
+        enabled = true,
+        show_start = false,
+        show_end = false,
+      },
+      exclude = {
+        filetypes = {
+          "help",
+          "alpha",
+          "dashboard",
+          "lazy",
+          "mason",
+          "neo-tree",
+          "NvimTree",
+          "Trouble",
+          "toggleterm",
+        },
+        buftypes = {
+          "terminal",
+          "nofile",
+          "quickfix",
+          "prompt",
+        },
+      },
+    },
+  },
 }
