@@ -17,6 +17,17 @@ local function detect_clangd()
   })
 end
 
+local function detect_python()
+  return existing_path({
+    vim.fn.exepath("python"),
+    vim.fn.exepath("python3"),
+    "C:/msys64/mingw64/bin/python.exe",
+    "C:/Python311/python.exe",
+    "C:/Python312/python.exe",
+    "C:/Python313/python.exe",
+  })
+end
+
 local function detect_gpp()
   return existing_path({
     vim.fn.exepath("g++"),
@@ -115,6 +126,7 @@ end
 
 local clangd_path = detect_clangd()
 local gpp_path = detect_gpp()
+local python_path = detect_python()
 
 local clangd_config = {
   init_options = {
@@ -158,6 +170,41 @@ else
   local ok, lspconfig = pcall(require, "lspconfig")
   if ok then
     lspconfig.clangd.setup(clangd_config)
+  end
+end
+
+local python_servers = {
+  pyright = {
+    settings = {
+      python = {
+        analysis = {
+          autoImportCompletions = true,
+          autoSearchPaths = true,
+          diagnosticMode = "workspace",
+          typeCheckingMode = "basic",
+          useLibraryCodeForTypes = true,
+        },
+      },
+    },
+  },
+  ruff = {},
+}
+
+if python_path ~= "" then
+  python_servers.pyright.settings.python.pythonPath = python_path
+end
+
+for server, config in pairs(python_servers) do
+  config.capabilities = capabilities
+
+  if vim.lsp.config and vim.lsp.enable then
+    vim.lsp.config(server, config)
+    vim.lsp.enable(server)
+  else
+    local ok, lspconfig = pcall(require, "lspconfig")
+    if ok and lspconfig[server] then
+      lspconfig[server].setup(config)
+    end
   end
 end
 

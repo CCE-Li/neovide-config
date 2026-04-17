@@ -73,6 +73,18 @@ local function compile_cpp_file(file_path)
   return vim.v.shell_error == 0, exe_path, output
 end
 
+local function detect_python_command()
+  local python_candidates = { "python", "python3" }
+
+  for _, candidate in ipairs(python_candidates) do
+    if vim.fn.executable(candidate) == 1 then
+      return candidate
+    end
+  end
+
+  return nil
+end
+
 local function list_txt_files(dir)
   local files = vim.fn.globpath(dir, "*.txt", false, true)
   table.sort(files, function(a, b)
@@ -330,57 +342,141 @@ end
 -- ======================== 5. 编译运行 (ACM 竞赛专用) =======================
 local acm_mode = { "n", "i" }
 
--- F5：保存并编译运行 C++ 文件
+local function run_python_file(file_path)
+  local python_cmd = detect_python_command()
+  if not python_cmd then
+    vim.notify("未找到可用的 python 可执行文件", vim.log.levels.ERROR)
+    return
+  end
+
+  local run_cmd = string.format(
+    "%s; & '%s' '%s'; Write-Host ''; Write-Host '按回车键退出...'; [void][System.Console]::ReadLine(); exit",
+    pwsh_cd_command(vim.fn.fnamemodify(file_path, ":h")),
+    pwsh_escape_single_quotes(vim.fn.exepath(python_cmd)),
+    pwsh_escape_single_quotes(file_path)
+  )
+  open_pwsh_command(run_cmd)
+end
+
+local function run_python_file_with_input(file_path, input_file)
+  local python_cmd = detect_python_command()
+  if not python_cmd then
+    vim.notify("未找到可用的 python 可执行文件", vim.log.levels.ERROR)
+    return
+  end
+
+  local run_cmd = string.format(
+    "%s; cmd /c '\"%s\" \"%s\" < \"%s\"'; Write-Host ''; Write-Host '按回车键退出...'; [void][System.Console]::ReadLine(); exit",
+    pwsh_cd_command(vim.fn.fnamemodify(file_path, ":h")),
+    vim.fn.exepath(python_cmd),
+    file_path,
+    input_file
+  )
+  open_pwsh_command(run_cmd)
+end
+
+-- F5：按文件类型编译或运行当前文件
 vim.keymap.set(acm_mode, "<F5>", function()
   vim.cmd("w")
-  local filename = vim.fn.expand("%")
-  local exe_name = vim.fn.expand("%:r") .. ".exe"
-  local compile_cmd = string.format("g++ -std=c++17 -O2 %s -o %s 2>&1", filename, exe_name)
-  local output = vim.fn.system(compile_cmd)
+  local file_path = vim.fn.expand("%:p")
+  local extension = vim.fn.expand("%:e")
 
-  if vim.v.shell_error == 0 then
-    local run_cmd = string.format(
-      "& '.\\%s'; Write-Host ''; Write-Host '按回车键退出...'; [void][System.Console]::ReadLine(); exit",
-      pwsh_escape_single_quotes(exe_name)
-    )
-    open_pwsh_command(run_cmd)
-  else
-    print("编译失败：")
-    print(output)
+  if file_path == "" then
+    vim.notify("当前没有可运行的文件", vim.log.levels.WARN)
+    return
   end
-end, vim.tbl_extend("force", map_opts, { desc = "ACM：编译并运行 C++ 文件" }))
 
--- F6：直接运行已编译的 exe 文件
+  if extension == "py" then
+    run_python_file(file_path)
+    return
+  end
+
+  if extension == "cpp" then
+    local filename = vim.fn.expand("%")
+    local exe_name = vim.fn.expand("%:r") .. ".exe"
+    local compile_cmd = string.format("g++ -std=c++17 -O2 %s -o %s 2>&1", filename, exe_name)
+    local output = vim.fn.system(compile_cmd)
+
+    if vim.v.shell_error == 0 then
+      local run_cmd = string.format(
+        "& '.\\%s'; Write-Host ''; Write-Host '按回车键退出...'; [void][System.Console]::ReadLine(); exit",
+        pwsh_escape_single_quotes(exe_name)
+      )
+      open_pwsh_command(run_cmd)
+    else
+      print("编译失败：")
+      print(output)
+    end
+    return
+  end
+
+  vim.notify("F5 目前仅支持 .py 和 .cpp 文件", vim.log.levels.WARN)
+end, vim.tbl_extend("force", map_opts, { desc = "按文件类型编译或运行当前文件" }))
+
+-- F6：按文件类型选择输入样例后运行当前文件
 vim.keymap.set(acm_mode, "<F6>", function()
   vim.cmd("w")
 
   local file_path = vim.fn.expand("%:p")
-  if file_path == "" or vim.fn.expand("%:e") ~= "cpp" then
-    vim.notify("F6 仅支持当前 C++ 文件", vim.log.levels.WARN)
+  local extension = vim.fn.expand("%:e")
+
+  if file_path == "" then
+    vim.notify("当前没有可运行的文件", vim.log.levels.WARN)
     return
   end
 
-  open_input_picker(function(input_file)
-    local ok, exe_path, output = compile_cpp_file(file_path)
-    if not ok then
-      vim.notify("编译失败，请查看消息输出", vim.log.levels.ERROR)
-      print("编译失败：")
-      print(output)
-      return
-    end
+  if extension == "cpp" then
+    open_input_picker(function(input_file)
+      local ok, exe_path, output = compile_cpp_file(file_path)
+      if not ok then
+        vim.notify("编译失败，请查看消息输出", vim.log.levels.ERROR)
+        print("编译失败：")
+        print(output)
+        return
+      end
 
-    local run_cmd = string.format(
-      "%s; cmd /c '\"%s\" < \"%s\"'; Write-Host ''; Write-Host '按回车键退出...'; [void][System.Console]::ReadLine(); exit",
-      pwsh_cd_command(vim.fn.fnamemodify(file_path, ":h")),
-      exe_path,
-      input_file
-    )
-    open_pwsh_command(run_cmd)
-  end)
-end, vim.tbl_extend("force", map_opts, { desc = "ACM：选择输入样例后编译运行 C++ 程序" }))
+      local run_cmd = string.format(
+        "%s; cmd /c '\"%s\" < \"%s\"'; Write-Host ''; Write-Host '按回车键退出...'; [void][System.Console]::ReadLine(); exit",
+        pwsh_cd_command(vim.fn.fnamemodify(file_path, ":h")),
+        exe_path,
+        input_file
+      )
+      open_pwsh_command(run_cmd)
+    end)
+    return
+  end
+
+  if extension == "py" then
+    open_input_picker(function(input_file)
+      run_python_file_with_input(file_path, input_file)
+    end)
+    return
+  end
+
+  vim.notify("F6 目前仅支持 .py 和 .cpp 文件", vim.log.levels.WARN)
+end, vim.tbl_extend("force", map_opts, { desc = "按文件类型选择输入样例后运行当前文件" }))
 
 -- F9：调试 (gdb)
 vim.keymap.set(acm_mode, "<F9>", ":w<CR>:!gdb %:r.exe<CR>", vim.tbl_extend("force", map_opts, { desc = "ACM：调试 C++ 程序" }))
+
+-- F7：保存并运行当前 Python 文件
+vim.keymap.set(acm_mode, "<F7>", function()
+  vim.cmd("w")
+
+  local file_path = vim.fn.expand("%:p")
+  if file_path == "" or vim.fn.expand("%:e") ~= "py" then
+    vim.notify("F7 仅支持当前 Python 文件", vim.log.levels.WARN)
+    return
+  end
+
+  local python_cmd = detect_python_command()
+  if not python_cmd then
+    vim.notify("未找到可用的 python 可执行文件", vim.log.levels.ERROR)
+    return
+  end
+
+  run_python_file(file_path)
+end, vim.tbl_extend("force", map_opts, { desc = "Python：运行当前文件" }))
 
 -- F8：CompetiTest 运行测试用例
 vim.keymap.set("n", "<F8>", ":CompetiTest run<CR>", vim.tbl_extend("force", map_opts, { desc = "CompetiTest：运行测试用例" }))
@@ -576,6 +672,25 @@ vim.keymap.set("n", "<C-n>", function()
   
   print(string.format("已创建新 C++ 文件: %s", new_filename))
 end, vim.tbl_extend("force", map_opts, { desc = "创建新的未命名 C++ 文件（新标签页）" }))
+
+-- Leader + np：在当前文件夹创建新的未命名 Python 文件（新标签页）
+vim.keymap.set("n", "<leader>np", function()
+  local current_file = vim.fn.expand("%:p")
+  local current_dir = vim.fn.fnamemodify(current_file, ":h")
+
+  if current_dir == "." then
+    current_dir = vim.fn.getcwd()
+  end
+
+  local timestamp = os.date("%Y%m%d_%H%M%S")
+  local new_filename = string.format("untitled_%s.py", timestamp)
+  local new_filepath = vim.fn.join({ current_dir, new_filename }, "\\")
+
+  vim.cmd("tabnew")
+  vim.cmd("edit " .. new_filepath)
+
+  print(string.format("已创建新 Python 文件: %s", new_filename))
+end, vim.tbl_extend("force", map_opts, { desc = "创建新的未命名 Python 文件（新标签页）" }))
 
 -- Ctrl + Shift + n：在当前文件夹创建新的未命名文件（当前标签页）
 vim.keymap.set("n", "<C-S-n>", function()

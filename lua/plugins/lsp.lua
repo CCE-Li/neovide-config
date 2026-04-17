@@ -7,6 +7,8 @@ return {
       ensure_installed = {
         "lua_ls",
         "clangd",
+        "pyright",
+        "ruff",
         "ts_ls",
         "rust_analyzer",
         "tailwindcss",
@@ -31,7 +33,10 @@ return {
           ensure_installed = {
             "clang-format",
             "clangd",
-            "cpptools"
+            "cpptools",
+            "black",
+            "isort",
+            "ruff"
           },
           auto_update = true,
           run_on_start = true,
