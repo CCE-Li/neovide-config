@@ -174,6 +174,125 @@ local function open_input_picker(on_select)
   vim.keymap.set("n", "<Esc>", close_picker, picker_opts)
 end
 
+local shortcut_help = {
+  state = {
+    buf = nil,
+    win = nil,
+  },
+}
+
+function shortcut_help.close()
+  if shortcut_help.state.win and vim.api.nvim_win_is_valid(shortcut_help.state.win) then
+    vim.api.nvim_win_close(shortcut_help.state.win, true)
+  end
+  shortcut_help.state.buf = nil
+  shortcut_help.state.win = nil
+end
+
+function shortcut_help.lines()
+  return {
+    "快捷键提示",
+    "",
+    "窗口管理",
+    "  Leader+ww                打开窗口操作菜单",
+    "  Ctrl+Alt+Left/Right      切换上一个 / 下一个缓冲区",
+    "  Alt+Shift+Ctrl+h/j/k/l   调整窗口大小",
+    "  Alt+Shift+Ctrl+方向键    调整窗口大小",
+    "  Ctrl+Tab / Ctrl+Shift+Tab 切换下一个 / 上一个标签页",
+    "  Alt+1..9 / Alt+0         跳到指定 / 最后一个标签页",
+    "  Alt+q                    关闭当前标签页",
+    "  MiddleMouse              关闭当前窗口",
+    "  Ctrl+滚轮上/下           增减窗口高度",
+    "  Ctrl+Shift+滚轮上/下     增减窗口宽度",
+    "",
+    "会话与界面",
+    "  Leader+ss / sr / sd      保存 / 恢复 / 删除会话",
+    "  Leader+sp                切换项目",
+    "  Leader+tt / bb / ll      切换标签栏 / 状态栏 / 行号",
+    "  Leader+cc / nn           专注模式 / 正常模式",
+    "",
+    "提示",
+    "  在命令行输入 :? 可再次打开此窗口",
+    "  按 q 或 Esc 关闭",
+  }
+end
+
+function shortcut_help.open()
+  if shortcut_help.state.win and vim.api.nvim_win_is_valid(shortcut_help.state.win) then
+    return
+  end
+
+  local lines = shortcut_help.lines()
+  local width = 0
+  for _, line in ipairs(lines) do
+    width = math.max(width, vim.fn.strdisplaywidth(line))
+  end
+
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  vim.bo[buf].buftype = "nofile"
+  vim.bo[buf].bufhidden = "wipe"
+  vim.bo[buf].swapfile = false
+  vim.bo[buf].modifiable = false
+  vim.bo[buf].filetype = "shortcut_help"
+
+  local height = #lines
+  local row = math.max(1, math.floor((vim.o.lines - height) / 2) - 1)
+  local col = math.max(0, math.floor((vim.o.columns - (width + 4)) / 2))
+
+  local win = vim.api.nvim_open_win(buf, true, {
+    relative = "editor",
+    row = row,
+    col = col,
+    width = width + 4,
+    height = height,
+    style = "minimal",
+    border = "rounded",
+    title = " 快捷键帮助 ",
+    title_pos = "center",
+    noautocmd = true,
+  })
+
+  vim.wo[win].wrap = false
+  vim.wo[win].winhighlight = "Normal:NormalFloat,FloatBorder:FloatBorder"
+
+  local opts = { buffer = buf, silent = true, noremap = true, nowait = true }
+  vim.keymap.set("n", "q", shortcut_help.close, opts)
+  vim.keymap.set("n", "<Esc>", shortcut_help.close, opts)
+
+  shortcut_help.state.buf = buf
+  shortcut_help.state.win = win
+end
+
+vim.api.nvim_create_user_command("ShortcutHelp", function()
+  vim.schedule(shortcut_help.open)
+end, { desc = "显示快捷键帮助浮窗" })
+
+local shortcut_help_group = vim.api.nvim_create_augroup("ShortcutHelpCmdline", { clear = true })
+
+vim.api.nvim_create_autocmd("CmdlineChanged", {
+  group = shortcut_help_group,
+  callback = function()
+    if vim.fn.getcmdtype() ~= ":" then
+      shortcut_help.close()
+      return
+    end
+
+    if vim.fn.getcmdline() == "?" then
+      shortcut_help.open()
+    else
+      shortcut_help.close()
+    end
+  end,
+})
+
+vim.api.nvim_create_autocmd({ "CmdlineLeave", "InsertEnter" }, {
+  group = shortcut_help_group,
+  callback = function()
+    shortcut_help.close()
+  end,
+})
+
 
 local function close_current_entry(force)
   local current_buf = vim.api.nvim_get_current_buf()
@@ -458,25 +577,6 @@ end, vim.tbl_extend("force", map_opts, { desc = "按文件类型选择输入样�
 
 -- F9：调试 (gdb)
 vim.keymap.set(acm_mode, "<F9>", ":w<CR>:!gdb %:r.exe<CR>", vim.tbl_extend("force", map_opts, { desc = "ACM：调试 C++ 程序" }))
-
--- F7：保存并运行当前 Python 文件
-vim.keymap.set(acm_mode, "<F7>", function()
-  vim.cmd("w")
-
-  local file_path = vim.fn.expand("%:p")
-  if file_path == "" or vim.fn.expand("%:e") ~= "py" then
-    vim.notify("F7 仅支持当前 Python 文件", vim.log.levels.WARN)
-    return
-  end
-
-  local python_cmd = detect_python_command()
-  if not python_cmd then
-    vim.notify("未找到可用的 python 可执行文件", vim.log.levels.ERROR)
-    return
-  end
-
-  run_python_file(file_path)
-end, vim.tbl_extend("force", map_opts, { desc = "Python：运行当前文件" }))
 
 -- F8：CompetiTest 运行测试用例
 vim.keymap.set("n", "<F8>", ":CompetiTest run<CR>", vim.tbl_extend("force", map_opts, { desc = "CompetiTest：运行测试用例" }))
@@ -836,6 +936,7 @@ vim.api.nvim_create_autocmd("VimEnter", {
       
       " 使用 cabbrev 创建 :new 的缩写，指向我们的 New 命令
       cabbrev new New
+      cnoreabbrev <expr> ? getcmdtype() == ':' && getcmdline() == '?' ? 'ShortcutHelp' : '?'
       cnoreabbrev <expr> q getcmdtype() == ':' && getcmdline() == 'q' ? 'CloseCurrentEntry' : 'q'
       cnoreabbrev <expr> q! getcmdtype() == ':' && getcmdline() == 'q!' ? 'CloseCurrentEntry!' : 'q!'
     ]])

@@ -14,11 +14,51 @@ local safe_require = function(module)
   return result
 end
 
+local function prepend_env_path(paths)
+  local path_sep = package.config:sub(1, 1) == "\\" and ";" or ":"
+  local current = vim.env.PATH or ""
+  local parts = vim.split(current, path_sep, { plain = true, trimempty = true })
+  local seen = {}
+
+  for _, part in ipairs(parts) do
+    seen[part:lower()] = true
+  end
+
+  local prefix = {}
+  for _, path in ipairs(paths) do
+    if path ~= "" and vim.uv.fs_stat(path) and not seen[path:lower()] then
+      table.insert(prefix, path)
+      seen[path:lower()] = true
+    end
+  end
+
+  if #prefix > 0 then
+    vim.env.PATH = table.concat(prefix, path_sep) .. path_sep .. current
+  end
+end
+
+prepend_env_path({
+  "C:/Users/Lenovo/AppData/Local/Programs/Python/Python39",
+  "C:/Users/Lenovo/AppData/Local/Programs/Python/Python39/Scripts",
+  "C:/Python",
+  "C:/Python/Scripts",
+})
+
 -- 基础样式/配置/快捷键/自动命令
 safe_require("ui.neovide")    -- Neovide 界面样式设置
 safe_require("core.options")  -- 基础全局配置（行号/缩进/编码等）
 safe_require("core.keymaps")  -- 快捷键映射（已重构优化版）
 safe_require("core.autocmds") -- 自动化脚本（自动命令）
+
+-- 为仍使用旧 LSP API 的插件提供兼容层，避免触发废弃警告
+if vim.lsp and vim.lsp.get_clients and vim.lsp.buf_get_clients then
+  vim.lsp.buf_get_clients = function(bufnr)
+    if type(bufnr) == "table" then
+      return vim.lsp.get_clients(bufnr)
+    end
+    return vim.lsp.get_clients({ bufnr = bufnr })
+  end
+end
 
 -- 插件配置（需确保 plugins.lua 存在且加载正常）
 safe_require("plugins")

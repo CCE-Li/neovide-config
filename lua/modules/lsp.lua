@@ -19,12 +19,14 @@ end
 
 local function detect_python()
   return existing_path({
+    "C:/Users/Lenovo/AppData/Local/Programs/Python/Python39/python.exe",
+    "C:/Python312/python.exe",
+    "C:/Python313/python.exe",
+    "C:/Python311/python.exe",
+    "C:/Python/python.exe",
     vim.fn.exepath("python"),
     vim.fn.exepath("python3"),
     "C:/msys64/mingw64/bin/python.exe",
-    "C:/Python311/python.exe",
-    "C:/Python312/python.exe",
-    "C:/Python313/python.exe",
   })
 end
 
