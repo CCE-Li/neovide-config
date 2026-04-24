@@ -1,8 +1,13 @@
 -- LSP 配置
 return {
+  {
+    "neovim/nvim-lspconfig",
+    event = { "BufReadPre", "BufNewFile" },
+  },
   -- LSP 管理器
   {
     "mason-org/mason-lspconfig.nvim",
+    event = { "BufReadPre", "BufNewFile" },
     opts = {
       ensure_installed = {
         "lua_ls",
@@ -44,9 +49,7 @@ return {
       },
       {
         "neovim/nvim-lspconfig",
-        cmd = { "LspInfo" },
-        event = { "BufReadPre", "BufNewFile" },
-      }
+      },
     },
   },
 }

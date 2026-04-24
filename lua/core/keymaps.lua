@@ -10,9 +10,9 @@ local global_opts = {
   mousemodel = "extend",        -- 插入模式鼠标选中不切换模式
   virtualedit = "onemore",      -- 允许光标移到行尾外
   selectmode = "mouse,key",     -- 选中后输入自动覆盖
-  shiftwidth = 2,               -- 缩进宽度（和 Tab 配置联动）
-  tabstop = 2,
-  softtabstop = 2,
+  shiftwidth = 4,               -- 默认缩进宽度（C/C++ 会单独覆盖为 2）
+  tabstop = 4,
+  softtabstop = 4,
   expandtab = true,             -- Tab 转为空格
 }
 
@@ -80,6 +80,52 @@ local function detect_python_command()
     if vim.fn.executable(candidate) == 1 then
       return candidate
     end
+  end
+
+  return nil
+end
+
+local function detect_executable(candidates)
+  for _, candidate in ipairs(candidates) do
+    if candidate and candidate ~= "" then
+      local resolved = vim.fn.exepath(candidate)
+      if resolved ~= nil and resolved ~= "" then
+        return resolved
+      end
+
+      if vim.uv.fs_stat(candidate) then
+        return candidate
+      end
+    end
+  end
+
+  return nil
+end
+
+local function detect_cargo_command()
+  return detect_executable({
+    "cargo",
+    "C:/Users/Lenovo/.cargo/bin/cargo.exe",
+  })
+end
+
+local function detect_rustc_command()
+  return detect_executable({
+    "rustc",
+    "C:/Users/Lenovo/.cargo/bin/rustc.exe",
+  })
+end
+
+local function find_cargo_manifest_dir(file_path)
+  local start_dir = vim.fn.fnamemodify(file_path, ":h")
+  local manifests = vim.fs.find("Cargo.toml", {
+    path = start_dir,
+    upward = true,
+    stop = vim.loop.os_homedir(),
+  })
+
+  if manifests[1] then
+    return vim.fs.dirname(manifests[1])
   end
 
   return nil
@@ -494,6 +540,95 @@ local function run_python_file_with_input(file_path, input_file)
   open_pwsh_command(run_cmd)
 end
 
+local function run_rust_file(file_path)
+  local cargo_cmd = detect_cargo_command()
+  local project_dir = find_cargo_manifest_dir(file_path)
+
+  if cargo_cmd and project_dir then
+    local run_cmd = string.format(
+      "%s; & '%s' run; Write-Host ''; Write-Host '按回车键退出...'; [void][System.Console]::ReadLine(); exit",
+      pwsh_cd_command(project_dir),
+      pwsh_escape_single_quotes(cargo_cmd)
+    )
+    open_pwsh_command(run_cmd)
+    return
+  end
+
+  local rustc_cmd = detect_rustc_command()
+  if not rustc_cmd then
+    vim.notify("未找到 cargo 或 rustc，可先安装 Rust 工具链", vim.log.levels.ERROR)
+    return
+  end
+
+  local exe_path = vim.fn.fnamemodify(file_path, ":r") .. ".exe"
+  local compile_cmd = string.format(
+    "& '%s' '%s' -o '%s' 2>&1",
+    pwsh_escape_single_quotes(rustc_cmd),
+    pwsh_escape_single_quotes(file_path),
+    pwsh_escape_single_quotes(exe_path)
+  )
+  local output = vim.fn.system(compile_cmd)
+
+  if vim.v.shell_error ~= 0 then
+    print("编译失败：")
+    print(output)
+    return
+  end
+
+  local run_cmd = string.format(
+    "%s; & '%s'; Write-Host ''; Write-Host '按回车键退出...'; [void][System.Console]::ReadLine(); exit",
+    pwsh_cd_command(vim.fn.fnamemodify(file_path, ":h")),
+    pwsh_escape_single_quotes(exe_path)
+  )
+  open_pwsh_command(run_cmd)
+end
+
+local function run_rust_file_with_input(file_path, input_file)
+  local cargo_cmd = detect_cargo_command()
+  local project_dir = find_cargo_manifest_dir(file_path)
+
+  if cargo_cmd and project_dir then
+    local run_cmd = string.format(
+      "%s; cmd /c '\"%s\" run < \"%s\"'; Write-Host ''; Write-Host '按回车键退出...'; [void][System.Console]::ReadLine(); exit",
+      pwsh_cd_command(project_dir),
+      cargo_cmd,
+      input_file
+    )
+    open_pwsh_command(run_cmd)
+    return
+  end
+
+  local rustc_cmd = detect_rustc_command()
+  if not rustc_cmd then
+    vim.notify("未找到 cargo 或 rustc，可先安装 Rust 工具链", vim.log.levels.ERROR)
+    return
+  end
+
+  local exe_path = vim.fn.fnamemodify(file_path, ":r") .. ".exe"
+  local compile_cmd = string.format(
+    "& '%s' '%s' -o '%s' 2>&1",
+    pwsh_escape_single_quotes(rustc_cmd),
+    pwsh_escape_single_quotes(file_path),
+    pwsh_escape_single_quotes(exe_path)
+  )
+  local output = vim.fn.system(compile_cmd)
+
+  if vim.v.shell_error ~= 0 then
+    vim.notify("编译失败，请查看消息输出", vim.log.levels.ERROR)
+    print("编译失败：")
+    print(output)
+    return
+  end
+
+  local run_cmd = string.format(
+    "%s; cmd /c '\"%s\" < \"%s\"'; Write-Host ''; Write-Host '按回车键退出...'; [void][System.Console]::ReadLine(); exit",
+    pwsh_cd_command(vim.fn.fnamemodify(file_path, ":h")),
+    exe_path,
+    input_file
+  )
+  open_pwsh_command(run_cmd)
+end
+
 -- F5：按文件类型编译或运行当前文件
 vim.keymap.set(acm_mode, "<F5>", function()
   vim.cmd("w")
@@ -529,7 +664,12 @@ vim.keymap.set(acm_mode, "<F5>", function()
     return
   end
 
-  vim.notify("F5 目前仅支持 .py 和 .cpp 文件", vim.log.levels.WARN)
+  if extension == "rs" then
+    run_rust_file(file_path)
+    return
+  end
+
+  vim.notify("F5 目前仅支持 .py、.cpp 和 .rs 文件", vim.log.levels.WARN)
 end, vim.tbl_extend("force", map_opts, { desc = "按文件类型编译或运行当前文件" }))
 
 -- F6：按文件类型选择输入样例后运行当前文件
@@ -572,7 +712,14 @@ vim.keymap.set(acm_mode, "<F6>", function()
     return
   end
 
-  vim.notify("F6 目前仅支持 .py 和 .cpp 文件", vim.log.levels.WARN)
+  if extension == "rs" then
+    open_input_picker(function(input_file)
+      run_rust_file_with_input(file_path, input_file)
+    end)
+    return
+  end
+
+  vim.notify("F6 目前仅支持 .py、.cpp 和 .rs 文件", vim.log.levels.WARN)
 end, vim.tbl_extend("force", map_opts, { desc = "按文件类型选择输入样例后运行当前文件" }))
 
 -- F9：调试 (gdb)

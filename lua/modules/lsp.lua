@@ -1,5 +1,26 @@
 local uv = vim.uv or vim.loop
 
+if vim.fn.exists(":LspInfo") == 0 then
+  vim.api.nvim_create_user_command("LspInfo", function()
+    local bufnr = vim.api.nvim_get_current_buf()
+    local clients = vim.lsp.get_clients({ bufnr = bufnr })
+
+    if #clients == 0 then
+      vim.notify("当前 buffer 没有附着任何 LSP", vim.log.levels.WARN)
+      return
+    end
+
+    local lines = { "当前 buffer 的 LSP:" }
+    for _, client in ipairs(clients) do
+      table.insert(lines, string.format("- %s (id=%d)", client.name, client.id))
+    end
+
+    vim.notify(table.concat(lines, "\n"), vim.log.levels.INFO, { title = "LSP Info" })
+  end, {
+    desc = "显示当前 buffer 的 LSP 客户端信息",
+  })
+end
+
 local function existing_path(paths)
   for _, path in ipairs(paths) do
     if path ~= "" and uv.fs_stat(path) then
@@ -30,6 +51,31 @@ local function detect_python()
   })
 end
 
+local function detect_cargo()
+  return existing_path({
+    vim.fn.exepath("cargo"),
+    "C:/Users/Lenovo/.cargo/bin/cargo.exe",
+  })
+end
+
+local function detect_rust_analyzer()
+  local candidates = {
+    vim.fn.stdpath("data") .. "/mason/packages/rust-analyzer/rust-analyzer.exe",
+    vim.fn.stdpath("data") .. "/mason/bin/rust-analyzer.cmd",
+  }
+
+  local exepath = vim.fn.exepath("rust-analyzer")
+  local lower_exepath = exepath:lower()
+  local is_rustup_proxy = lower_exepath:find("\\.cargo\\bin\\rust%-analyzer%.exe$") ~= nil
+    or lower_exepath:find("/%.cargo/bin/rust%-analyzer%.exe$") ~= nil
+
+  if exepath ~= "" and not is_rustup_proxy then
+    table.insert(candidates, exepath)
+  end
+
+  return existing_path(candidates)
+end
+
 local function detect_gpp()
   return existing_path({
     vim.fn.exepath("g++"),
@@ -38,16 +84,30 @@ local function detect_gpp()
   })
 end
 
+local function safe_system_wait(cmd, opts)
+  local ok, system_obj = pcall(vim.system, cmd, opts or {})
+  if not ok or not system_obj then
+    return nil
+  end
+
+  local wait_ok, result = pcall(system_obj.wait, system_obj)
+  if not wait_ok then
+    return nil
+  end
+
+  return result
+end
+
 local function detect_gpp_target(gpp_path)
   if gpp_path == "" then
     return ""
   end
 
-  local result = vim.system({ gpp_path, "-dumpmachine" }, {
+  local result = safe_system_wait({ gpp_path, "-dumpmachine" }, {
     text = true,
-  }):wait()
+  })
 
-  if result.code ~= 0 or not result.stdout then
+  if not result or result.code ~= 0 or not result.stdout then
     return ""
   end
 
@@ -77,12 +137,12 @@ local function detect_include_dirs(gpp_path)
     return {}
   end
 
-  local result = vim.system({ gpp_path, "-E", "-x", "c++", "-", "-v" }, {
+  local result = safe_system_wait({ gpp_path, "-E", "-x", "c++", "-", "-v" }, {
     text = true,
     stdin = "",
-  }):wait()
+  })
 
-  if result.code ~= 0 or not result.stderr then
+  if not result or result.code ~= 0 or not result.stderr then
     return {}
   end
 
@@ -126,9 +186,64 @@ local function build_fallback_flags(gpp_path)
   return flags
 end
 
+local function detect_project_root(start_path, markers)
+  local path = start_path
+  if type(path) == "number" then
+    path = vim.api.nvim_buf_get_name(path)
+  end
+
+  if type(path) ~= "string" then
+    path = ""
+  end
+
+  if path == "" then
+    return vim.fn.getcwd()
+  end
+
+  local stat = uv.fs_stat(path)
+  local start_dir = path
+
+  if stat and stat.type == "file" then
+    start_dir = vim.fs.dirname(path) or path
+  end
+
+  local matches = vim.fs.find(markers, {
+    path = start_dir,
+    upward = true,
+  })
+
+  if matches[1] then
+    return vim.fs.dirname(matches[1])
+  end
+
+  return start_dir
+end
+
+local function find_project_file(start_path)
+  local path = start_path
+  if type(path) == "number" then
+    path = vim.api.nvim_buf_get_name(path)
+  end
+
+  if type(path) ~= "string" or path == "" then
+    return nil
+  end
+
+  local stat = uv.fs_stat(path)
+  local start_dir = stat and stat.type == "file" and (vim.fs.dirname(path) or path) or path
+  local matches = vim.fs.find({ "Cargo.toml", "rust-project.json" }, {
+    path = start_dir,
+    upward = true,
+  })
+
+  return matches[1]
+end
+
 local clangd_path = detect_clangd()
 local gpp_path = detect_gpp()
 local python_path = detect_python()
+local cargo_path = detect_cargo()
+local rust_analyzer_path = detect_rust_analyzer()
 
 local clangd_config = {
   init_options = {
@@ -194,6 +309,106 @@ local python_servers = {
 
 if python_path ~= "" then
   python_servers.pyright.settings.python.pythonPath = python_path
+end
+
+local rust_analyzer_config = {
+  capabilities = capabilities,
+  filetypes = { "rust" },
+  root_markers = { "Cargo.toml", "rust-project.json", ".git" },
+  root_dir = function(fname)
+    return detect_project_root(fname, { "Cargo.toml", "rust-project.json", ".git" })
+  end,
+  settings = {
+    ["rust-analyzer"] = {
+      cargo = {
+        allFeatures = true,
+      },
+      checkOnSave = true,
+      check = {
+        command = "clippy",
+      },
+      procMacro = {
+        enable = true,
+      },
+    },
+  },
+}
+
+if cargo_path ~= "" then
+  rust_analyzer_config.cmd_env = {
+    PATH = vim.env.PATH,
+    CARGO = cargo_path,
+  }
+end
+
+if rust_analyzer_path ~= "" then
+  rust_analyzer_config.cmd = { rust_analyzer_path }
+else
+  vim.notify("未找到 rust-analyzer，可执行 Rust 补全将不可用", vim.log.levels.WARN)
+end
+
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "rust",
+  callback = function(args)
+    if rust_analyzer_path == "" then
+      return
+    end
+
+    local existing_clients = vim.lsp.get_clients({
+      bufnr = args.buf,
+      name = "rust_analyzer",
+    })
+
+    if #existing_clients > 0 then
+      return
+    end
+
+    local bufname = vim.api.nvim_buf_get_name(args.buf)
+    local root_dir = detect_project_root(args.buf, { "Cargo.toml", "rust-project.json", ".git" })
+    local project_file = find_project_file(args.buf)
+
+    local start_config = vim.tbl_deep_extend("force", rust_analyzer_config, {
+      name = "rust_analyzer",
+      root_dir = root_dir,
+      workspace_folders = {
+        {
+          uri = vim.uri_from_fname(root_dir),
+          name = vim.fs.basename(root_dir),
+        },
+      },
+    })
+
+    if bufname == "" then
+      return
+    end
+
+    if not project_file then
+      start_config.settings = vim.tbl_deep_extend("force", start_config.settings or {}, {
+        ["rust-analyzer"] = {
+          detachedFiles = { bufname },
+        },
+      })
+    end
+
+    local client_id = vim.lsp.start(start_config, {
+      bufnr = args.buf,
+    })
+
+    if not client_id then
+      vim.notify("rust_analyzer 启动失败", vim.log.levels.WARN)
+    end
+  end,
+  desc = "启动 rust_analyzer",
+})
+
+if vim.lsp.config and vim.lsp.enable then
+  vim.lsp.config("rust_analyzer", rust_analyzer_config)
+  vim.lsp.enable("rust_analyzer")
+else
+  local ok, lspconfig = pcall(require, "lspconfig")
+  if ok and lspconfig.rust_analyzer then
+    lspconfig.rust_analyzer.setup(rust_analyzer_config)
+  end
 end
 
 for server, config in pairs(python_servers) do

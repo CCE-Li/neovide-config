@@ -38,6 +38,7 @@ local function prepend_env_path(paths)
 end
 
 prepend_env_path({
+  "C:/Users/Lenovo/.cargo/bin",
   "C:/Users/Lenovo/AppData/Local/Programs/Python/Python39",
   "C:/Users/Lenovo/AppData/Local/Programs/Python/Python39/Scripts",
   "C:/Python",

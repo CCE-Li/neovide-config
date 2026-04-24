@@ -63,11 +63,3 @@ vim.keymap.set("n", "<leader>f", function()
 end, {
   desc = "Format current file with clang-format",
 })
-
-vim.api.nvim_create_autocmd("BufWritePre", {
-  pattern = { "*.cpp", "*.c", "*.h", "*.hpp" },
-  callback = function(args)
-    format_current_file(args.buf)
-  end,
-  desc = "Format C/C++ files with clang-format before saving",
-})

@@ -23,3 +23,20 @@ vim.api.nvim_create_autocmd("FileType", {
     vim.bo[args.buf].commentstring = "# %s"
   end,
 })
+
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = { "c", "cpp" },
+  callback = function()
+    local opts = {
+      tabstop = 2,
+      shiftwidth = 2,
+      softtabstop = 2,
+      expandtab = true,
+    }
+
+    for key, value in pairs(opts) do
+      vim.opt_local[key] = value
+    end
+  end,
+})
+

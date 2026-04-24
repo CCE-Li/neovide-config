@@ -12,6 +12,7 @@
 
 ### 🔧 开发环境
 - **LSP 支持** - 配置 `clangd` 语法检测和智能补全
+- **Rust 开发支持** - 集成 `rust_analyzer`、Rust Treesitter 高亮与 `cargo run`
 - **代码补全** - 集成 `blink.cmp` 补全引擎
 - **语法高亮** - 使用 `nvim-treesitter` 提供精确的语法高亮
 - **括号匹配** - 智能括号匹配和自动缩进
@@ -88,6 +89,7 @@ nvim/
 - Git
 - C++ 编译器（g++/clang++）
 - clangd（LSP 服务器）
+- Rust（建议通过 `rustup` 安装 `cargo`、`rustc`、`rustfmt`、`clippy`）
 
 ### 安装步骤
 1. 备份现有配置：
@@ -130,6 +132,17 @@ neovide
 - 按 `F5` 编译并运行当前文件
 - 编译错误会显示在下方控制台
 - 支持多文件项目编译
+
+## 🦀 Rust 使用
+
+- 打开 `.rs` 文件后会自动启用 `rust_analyzer`
+- `F5`：如果当前文件所在目录向上能找到 `Cargo.toml`，则执行 `cargo run`；否则退回到单文件 `rustc` 编译运行
+- `F6`：可选择当前目录中的 `.txt` 文件，作为 Rust 程序标准输入运行
+- 建议先安装官方工具链：
+  ```bash
+  rustup default stable
+  rustup component add rustfmt clippy
+  ```
 
 ### 在线评测
 使用 `competitest.nvim` 插件：
